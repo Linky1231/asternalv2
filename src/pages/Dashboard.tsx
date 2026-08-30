@@ -55,7 +55,57 @@ function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
+// ── Hook: converts a Convex storage URL into a playable blob URL ──
+const videoBlobCache = new Map<string, string>();
+
+function useVideoObjectUrl(url: string, mime: string) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(() => videoBlobCache.get(url) ?? null);
+
+  useEffect(() => {
+    if (!url) return;
+    // Already cached
+    if (videoBlobCache.has(url)) {
+      setObjectUrl(videoBlobCache.get(url)!);
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+
+    fetch(url, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        const typedBlob = new Blob([blob], { type: mime || "video/mp4" });
+        const objUrl = URL.createObjectURL(typedBlob);
+        videoBlobCache.set(url, objUrl);
+        setObjectUrl(objUrl);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") console.error("Error cargando vídeo:", err);
+      });
+
+    return () => { cancelled = true; controller.abort(); };
+  }, [url, mime]);
+
+  return objectUrl;
+}
+
 interface LightboxItem { url: string; type: "image" | "video"; mime?: string; }
+
+function LightboxVideo({ url, mime }: { url: string; mime?: string }) {
+  const objUrl = useVideoObjectUrl(url, mime || "video/mp4");
+  if (!objUrl) {
+    return (
+      <div className="flex h-48 w-full items-center justify-center rounded-lg bg-black/50">
+        <span className="text-sm text-white/60">Cargando vídeo…</span>
+      </div>
+    );
+  }
+  return <video key={objUrl} src={objUrl} controls autoPlay playsInline className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />;
+}
 
 function Lightbox({ items, initialIndex, onClose }: { items: LightboxItem[]; initialIndex: number; onClose: () => void }) {
   const [index, setIndex] = useState(initialIndex);
@@ -100,9 +150,7 @@ function Lightbox({ items, initialIndex, onClose }: { items: LightboxItem[]; ini
       )}
       <div className="flex max-h-[90vh] max-w-[90vw] items-center justify-center" onClick={(e) => e.stopPropagation()}>
         {current.type === "video" ? (
-          <video key={current.url} controls autoPlay playsInline className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain">
-            <source src={current.url} type={current.mime || "video/mp4"} />
-          </video>
+          <LightboxVideo url={current.url} mime={current.mime} />
         ) : (
           <img key={current.url} src={current.url} alt="Tamaño completo" className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />
         )}
@@ -134,37 +182,47 @@ function DeleteConfirmDialog({ open, onConfirm, onCancel }: { open: boolean; onC
   );
 }
 
-function SingleMedia({ item, index, onOpenLightbox }: { item: LightboxItem; index: number; onOpenLightbox: (i: number) => void }) {
+// ── Thumbnail video in feed (uses blob URL for reliable preview) ──
+function FeedVideo({ item, onClick }: { item: LightboxItem; onClick: () => void }) {
   const [videoError, setVideoError] = useState(false);
-  if (item.type === "video") {
-    return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onOpenLightbox(index)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpenLightbox(index); }}
-        className="group relative block w-full cursor-pointer bg-muted outline-none"
-      >
-        {!videoError ? (
-          <video
-            preload="metadata"
-            muted
-            playsInline
-            className="mx-auto block max-h-80 w-full object-contain"
-            onError={() => setVideoError(true)}
-          >
-            <source src={item.url} type={item.mime || "video/mp4"} />
-          </video>
-        ) : (
-          <div className="flex h-28 w-full items-center justify-center bg-muted">
-            <Film className="h-8 w-8 text-muted-foreground/40" />
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm"><Play className="ml-0.5 h-5 w-5" /></div>
+  const objUrl = useVideoObjectUrl(item.url, item.mime || "video/mp4");
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
+      className="group relative block w-full cursor-pointer bg-muted outline-none"
+    >
+      {!videoError && objUrl ? (
+        <video
+          preload="metadata"
+          muted
+          playsInline
+          className="mx-auto block max-h-80 w-full object-contain"
+          onError={() => setVideoError(true)}
+          src={objUrl}
+        />
+      ) : !objUrl ? (
+        <div className="flex h-28 w-full items-center justify-center bg-muted">
+          <span className="text-xs text-muted-foreground">Cargando…</span>
         </div>
+      ) : (
+        <div className="flex h-28 w-full items-center justify-center bg-muted">
+          <Film className="h-8 w-8 text-muted-foreground/40" />
+        </div>
+      )}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm"><Play className="ml-0.5 h-5 w-5" /></div>
       </div>
-    );
+    </div>
+  );
+}
+
+function SingleMedia({ item, index, onOpenLightbox }: { item: LightboxItem; index: number; onOpenLightbox: (i: number) => void }) {
+  if (item.type === "video") {
+    return <FeedVideo item={item} onClick={() => onOpenLightbox(index)} />;
   }
   return (
     <div
@@ -363,7 +421,7 @@ export default function Dashboard() {
                       {pm.type === "video" ? <video src={pm.preview} className="h-28 w-full object-contain" muted /> : <img src={pm.preview} alt={pm.file.name} className="h-28 w-full object-contain" />}
                       <button type="button" onClick={() => removePending(pm.id)} className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"><X className="h-3.5 w-3.5" /></button>
                       <div className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
-                        {pm.type === "video" ? <Film className="inline h-3 w-3" /> : <ImagePlus className="inline h-3 w-3" />}{" "}{pm.file.name.length > 16 ? pm.file.name.slice(0, 14) + "…" : pm.file.name}
+                        {pm.type === "video" ? <Film className="inline h-3 w-3" /> : <ImagePlus className="inline h-3 w-3" />}{` `}{pm.file.name.length > 16 ? pm.file.name.slice(0, 14) + "…" : pm.file.name}
                       </div>
                     </div>
                   ))}

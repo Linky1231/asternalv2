@@ -51,8 +51,8 @@ export default function Landing() {
         </div>
       </nav>
 
-      <section className="relative flex min-h-screen items-center justify-center pt-16">
-        <div className="mx-auto max-w-4xl px-6 text-center">
+      <section className="relative flex min-h-screen items-center justify-center px-6 pt-20 pb-16">
+        <div className="mx-auto max-w-4xl text-center">
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -110,7 +110,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="border-t border-border/50 bg-muted/30 py-24">
+      <section className="border-t border-border/50 bg-muted/30 py-32">
         <div className="mx-auto max-w-6xl px-6">
           <motion.div
             className="text-center"
@@ -128,7 +128,7 @@ export default function Landing() {
             </h2>
           </motion.div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-3">
+          <div className="mt-20 grid gap-8 sm:grid-cols-3">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
@@ -154,7 +154,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-24">
+      <section className="py-32">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <motion.div
             initial="hidden"
@@ -166,7 +166,7 @@ export default function Landing() {
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               ¿Listo para subir de nivel?
             </h2>
-            <p className="mt-4 text-muted-foreground">
+            <p className="mt-5 text-lg text-muted-foreground">
               Únete a Asternal y sé parte de algo más grande.
             </p>
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} className="inline-block">

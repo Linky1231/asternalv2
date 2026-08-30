@@ -1572,11 +1572,8 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Nav ──────────────────────────────────────────────── */}
-      <motion.nav
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <nav
+        className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/assets/67385.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -1597,7 +1594,7 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* ── Main ─────────────────────────────────────────────── */}        <main className="mx-auto max-w-2xl px-4 py-10">
         {/* Composer */}

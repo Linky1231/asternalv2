@@ -399,16 +399,30 @@ function Lightbox({
         className="flex max-h-[90vh] max-w-[90vw] items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
-        {current.type === "video" ? (
-          <LightboxVideo url={current.url} mime={current.mime} />
-        ) : (
-          <img
-            key={current.url}
-            src={current.url}
-            alt="Tamaño completo"
-            className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain"
-          />
-        )}
+        <AnimatePresence mode="wait">
+          {current.type === "video" ? (
+            <motion.div
+              key={`video-${index}`}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            >
+              <LightboxVideo url={current.url} mime={current.mime} />
+            </motion.div>
+          ) : (
+            <motion.img
+              key={`img-${index}`}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              src={current.url}
+              alt="Tamaño completo"
+              className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain"
+            />
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
@@ -486,10 +500,15 @@ function isNonOptimalAspect(w: number, h: number): boolean {
 /** Badge shown when media has non-optimal dimensions. */
 function DimensionBadge() {
   return (
-    <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+      className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-sm"
+    >
       <AlertTriangle className="h-3 w-3" />
       <span>Toca para ver completo</span>
-    </div>
+    </motion.div>
   );
 }
 
@@ -1778,7 +1797,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Nav ──────────────────────────────────────────────── */}
-      <nav
+      <motion.nav
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -1850,7 +1869,7 @@ export default function Dashboard() {
                 <div className="mt-4 grid grid-cols-2 gap-2.5">
                   <AnimatePresence initial={false}>
                   {pendingMedia.map((pm) => (
-                    <div
+                    <motion.div
                       key={pm.id}
                       className="group relative overflow-hidden rounded-xl border border-border/40 bg-muted"
                     >

@@ -486,8 +486,21 @@ function MediaGrid({
 function FormatToolbar() {
   const [showColors, setShowColors] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const colorRef = useRef<HTMLDivElement>(null);
   const sizeRef = useRef<HTMLDivElement>(null);
+
+  const hasSelection = () => {
+    const sel = window.getSelection();
+    return sel && sel.rangeCount > 0 && !sel.isCollapsed;
+  };
+
+  const showHint = (msg: string) => {
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    setHint(msg);
+    hintTimer.current = setTimeout(() => setHint(null), 2500);
+  };
 
   // Close popovers on outside click
   useEffect(() => {
@@ -503,7 +516,7 @@ function FormatToolbar() {
   }, [showColors, showSizes]);
 
   return (
-    <div className="flex items-center gap-1.5 pt-3">
+    <div className="relative flex items-center gap-1.5 pt-3">
       {/* Color picker */}
       <div className="relative" ref={colorRef}>
         <Button
@@ -512,6 +525,10 @@ function FormatToolbar() {
           size="sm"
           className="gap-1 px-2.5 text-muted-foreground hover:text-primary"
           onClick={() => {
+            if (!hasSelection()) {
+              showHint("Selecciona un texto primero para cambiar el color");
+              return;
+            }
             setShowSizes(false);
             setShowColors((v) => !v);
           }}
@@ -608,6 +625,10 @@ function FormatToolbar() {
           size="sm"
           className="gap-1 px-2.5 text-muted-foreground hover:text-primary"
           onClick={() => {
+            if (!hasSelection()) {
+              showHint("Selecciona un texto primero para cambiar el tamaño");
+              return;
+            }
             setShowColors(false);
             setShowSizes((v) => !v);
           }}
@@ -647,6 +668,21 @@ function FormatToolbar() {
         )}
         </AnimatePresence>
       </div>
+
+      {/* Selection hint */}
+      <AnimatePresence>
+        {hint && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.2 }}
+            className="absolute bottom-full left-0 z-50 mb-2 whitespace-nowrap rounded-lg border border-border/60 bg-muted px-3 py-1.5 text-xs text-muted-foreground shadow-lg"
+          >
+            {hint}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

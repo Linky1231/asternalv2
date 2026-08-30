@@ -555,6 +555,21 @@ function FormatToolbar() {
           <span className="text-sm font-extrabold leading-none">B</span>
         </Button>
 
+        {/* Underline */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 px-3 text-muted-foreground hover:text-primary"
+          onClick={() => {
+            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+            applyStyleToSelection({ textDecoration: "underline" });
+          }}
+          title="Subrayado"
+        >
+          <span className="text-sm font-medium underline leading-none">S</span>
+        </Button>
+
         {/* Hint */}
         <AnimatePresence>
           {hint && (
@@ -738,33 +753,22 @@ function PostCard({
                 : "text-muted-foreground hover:text-primary/70"
             }`}
           >
-            <span className="relative flex items-center justify-center">
-              {/* Ripple ring on like */}
-              {post.likedByMe && (
-                <motion.span
-                  key={`ring-${post._id}`}
-                  initial={{ scale: 0.8, opacity: 0.6 }}
-                  animate={{ scale: 2, opacity: 0 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
-                  className="absolute inset-0 rounded-full border-2 border-primary/30"
-                  style={{ width: 28, height: 28, margin: "auto" }}
-                />
-              )}
-              {/* Heart icon */}
-              <motion.span
-                key={`heart-${post.likedByMe}-${post._id}`}
-                initial={post.likedByMe ? { scale: 0.6, rotate: -8 } : { scale: 1.1 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 800, damping: 12 }}
-                className="relative z-10 flex items-center justify-center"
-              >
-                <Heart
-                  className={`h-4 w-4 transition-colors duration-200 ${
-                    post.likedByMe ? "fill-primary text-primary" : "text-current"
-                  }`}
-                />
-              </motion.span>
-            </span>
+            {/* Heart icon with fill animation */}
+            <motion.span
+              key={`heart-${post.likedByMe}-${post._id}`}
+              initial={post.likedByMe ? { scale: 0.5 } : { scale: 1.08 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 900, damping: 10, mass: 0.4 }}
+              className="flex items-center justify-center"
+            >
+              <Heart
+                className={`h-4 w-4 transition-all duration-150 ${
+                  post.likedByMe
+                    ? "fill-primary text-primary scale-110"
+                    : "fill-transparent text-current"
+                }`}
+              />
+            </motion.span>
             {/* Like count with animated number */}
             <AnimatePresence mode="popLayout">
               {post.likes > 0 && (

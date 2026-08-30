@@ -146,6 +146,23 @@ function sanitizePostHtml(html: string): string {
   return tmp.innerHTML;
 }
 
+// ── Aspect ratio detection hook ───────────────────────────────────
+/**
+ * Detects if media has a problematic aspect ratio for feed display.
+ * Returns { isProblematic, ratio } once dimensions are known.
+ * Vertical photos (ratio < 0.55) or panoramic (ratio > 2.5) are flagged.
+ */
+function useAspectCheck(
+  type: "image" | "video",
+): { isProblematic: boolean; ratio: number | null; onDimensions: (w: number, h: number) => void } {
+  const [ratio, setRatio] = useState<number | null>(null);
+  const onDimensions = useCallback((w: number, h: number) => {
+    if (w > 0 && h > 0) setRatio(w / h);
+  }, []);
+  const isProblematic = ratio !== null && (ratio < 0.55 || ratio > 2.5);
+  return { isProblematic, ratio, onDimensions };
+}
+
 // ── Video blob URL hook ────────────────────────────────────────────
 const videoBlobCache = new Map<string, string>();
 
@@ -458,6 +475,24 @@ function DeleteConfirmDialog({
 }
 
 // ── Feed video thumbnail ───────────────────────────────────────────
+/** Check if media dimensions are non-optimal for feed display. */
+function isNonOptimalAspect(w: number, h: number): boolean {
+  if (w === 0 || h === 0) return false;
+  const ratio = h / w;
+  // Very tall (>2:1) or very wide (>3:1)
+  return ratio > 2 || ratio < 0.33;
+}
+
+/** Badge shown when media has non-optimal dimensions. */
+function DimensionBadge() {
+  return (
+    <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
+      <AlertTriangle className="h-3 w-3" />
+      <span>Toca para ver completo</span>
+    </div>
+  );
+}
+
 function FeedVideo({
   item,
   onClick,
@@ -466,6 +501,7 @@ function FeedVideo({
   onClick: () => void;
 }) {
   const [videoError, setVideoError] = useState(false);
+  const [aspectWarning, setAspectWarning] = useState(false);
   const objUrl = useVideoObjectUrl(item.url, item.mime || "video/mp4");
 
   return (
@@ -485,6 +521,12 @@ function FeedVideo({
           playsInline
           className="mx-auto block max-h-80 w-full object-contain"
           onError={() => setVideoError(true)}
+          onLoadedMetadata={(e) => {
+            const v = e.currentTarget;
+            if (isNonOptimalAspect(v.videoWidth, v.videoHeight)) {
+              setAspectWarning(true);
+            }
+          }}
           src={objUrl}
         />
       ) : !objUrl ? (
@@ -501,6 +543,7 @@ function FeedVideo({
           <Play className="ml-0.5 h-5 w-5" />
         </div>
       </div>
+      {aspectWarning && <DimensionBadge />}
     </div>
   );
 }
@@ -521,6 +564,21 @@ function SingleMedia({
     );
   }
   return (
+    <ImageWithDetection item={item} index={index} onOpenLightbox={onOpenLightbox} />
+  );
+}
+
+function ImageWithDetection({
+  item,
+  index,
+  onOpenLightbox,
+}: {
+  item: LightboxItem;
+  index: number;
+  onOpenLightbox: (i: number) => void;
+}) {
+  const [aspectWarning, setAspectWarning] = useState(false);
+  return (
     <div
       role="button"
       tabIndex={0}
@@ -528,14 +586,21 @@ function SingleMedia({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onOpenLightbox(index);
       }}
-      className="block w-full cursor-pointer bg-muted outline-none"
+      className="relative block w-full cursor-pointer bg-muted outline-none"
     >
       <img
         src={item.url}
         alt={`Imagen ${index + 1}`}
         loading="lazy"
         className="mx-auto block max-h-80 w-full object-contain"
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          if (isNonOptimalAspect(img.naturalWidth, img.naturalHeight)) {
+            setAspectWarning(true);
+          }
+        }}
       />
+      {aspectWarning && <DimensionBadge />}
     </div>
   );
 }

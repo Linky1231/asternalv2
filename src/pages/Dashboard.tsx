@@ -902,8 +902,8 @@ function PostCard({
       exit={{ opacity: 0, y: -12 }}
       className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-border"
     >
-      <div className="p-5">
-        <div className="flex items-start gap-3.5">
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start gap-3 sm:gap-3.5">
           <Avatar className="h-10 w-10 shrink-0 border border-border/50">
             <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
               {getInitials(post.authorName)}
@@ -938,8 +938,8 @@ function PostCard({
           onOpenLightbox={(i) => onOpenLightbox(post.mediaUrls, i)}
         />
       )}
-      <div className="px-5 pb-3 pt-3">
-        <div className="flex items-center gap-4">
+      <div className="px-4 pb-3 pt-3 sm:px-5">
+        <div className="flex items-center gap-3 sm:gap-4">
           <motion.button
             type="button"
             whileTap={{ scale: 0.85 }}
@@ -980,7 +980,7 @@ function PostCard({
       </div>
 
       {/* Comments button */}
-      <div className="border-t border-border/40 px-5 py-2">
+      <div className="border-t border-border/40 px-4 py-2 sm:px-5">
         <button
           type="button"
           onClick={() => onOpenComments({ ...post, postNumber: postNumber ?? 0 })}
@@ -1030,7 +1030,7 @@ function MentionPicker({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/50 bg-background/80 px-4 py-3 backdrop-blur-xl">
+      <div className="flex items-center gap-3 border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur-md">
         <button
           type="button"
           onClick={onClose}
@@ -1177,7 +1177,7 @@ function CommentsModal({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="border-b border-border/50 bg-background/80 px-5 py-4 backdrop-blur-xl">
+      <div className="border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur-md sm:px-5 sm:py-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -1205,7 +1205,7 @@ function CommentsModal({
       </div>
 
       {/* Comments list */}
-      <div className="flex-1 overflow-y-auto px-5 py-3">
+      <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-5">
         {topLevelComments.length > 0 && (
           <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Comentarios</p>
         )}
@@ -1233,7 +1233,7 @@ function CommentsModal({
       </div>
 
       {/* Comment input (fixed at bottom) */}
-      <div className="border-t border-border/50 bg-background/80 px-5 py-3 backdrop-blur-xl">
+      <div className="border-t border-border/50 bg-background/95 px-4 py-3 backdrop-blur-md sm:px-5">
         {replyTo && (
           <div className="mb-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Reply className="h-3 w-3" />
@@ -1256,7 +1256,6 @@ function CommentsModal({
               placeholder={replyTo ? "Escribe una respuesta…" : "Escribe un comentario…"}
               className="min-h-[36px] w-full rounded-xl border border-border/50 bg-muted/50 px-3 py-2 text-xs text-card-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
               maxLength={1000}
-              autoFocus
             />
           </div>
           <Button
@@ -1596,13 +1595,14 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* ── Main ─────────────────────────────────────────────── */}        <main className="mx-auto max-w-2xl px-4 py-10">
+      {/* ── Main ─────────────────────────────────────────────── */}
+      <main className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
         {/* Composer */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
-          className="rounded-2xl border border-border/60 bg-card p-5"
+          className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
@@ -1736,7 +1736,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Feed */}
-        <div className="mt-8 flex flex-col gap-5">
+        <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
           <AnimatePresence mode="popLayout">
             {posts === undefined ? (
               Array.from({ length: 3 }).map((_, i) => (

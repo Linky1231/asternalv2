@@ -18,6 +18,7 @@ import {
   Type,
   MessageCircle,
   Reply,
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -75,6 +76,17 @@ interface LightboxItem {
   mime?: string;
 }
 
+interface MentionUser {
+  _id: string;
+  name: string;
+  image?: string;
+}
+
+interface PostMention {
+  userId: string;
+  name: string;
+}
+
 // ── Utilities ──────────────────────────────────────────────────────
 function formatTime(timestamp: number) {
   const diff = Date.now() - timestamp;
@@ -108,11 +120,18 @@ function sanitizePostHtml(html: string): string {
       if (node.tagName === "SPAN") {
         const color = node.style.color;
         const fontSize = node.style.fontSize;
+        const isMention = node.classList.contains("mention") ||
+          node.getAttribute("data-mention-user-id");
         node.removeAttribute("class");
         node.removeAttribute("id");
         node.removeAttribute("style");
         if (color) node.style.color = color;
         if (fontSize) node.style.fontSize = fontSize;
+        if (isMention) {
+          node.classList.add("mention");
+          node.style.color = "var(--primary)";
+          node.style.fontWeight = "600";
+        }
         Array.from(node.childNodes).forEach(walk);
         return;
       }
@@ -912,6 +931,113 @@ function PostCard({
   );
 }
 
+// ── Mention Picker Modal ──────────────────────────────────────
+function MentionPicker({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (user: MentionUser) => void;
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const allUsers = useQuery(api.users.search, { query: searchQuery }) ?? [];
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    searchInputRef.current?.focus();
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      className="fixed inset-0 z-[95] flex flex-col bg-background"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-border/50 bg-background/80 px-4 py-3 backdrop-blur-xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <h3 className="text-sm font-semibold">Mencionar persona</h3>
+      </div>
+
+      {/* Search */}
+      <div className="border-b border-border/40 px-4 py-3">
+        <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/50 px-3 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nombre..."
+            className="flex-1 bg-transparent text-sm text-card-foreground outline-none placeholder:text-muted-foreground"
+          />
+          {searchQuery && (
+            <button type="button" onClick={() => setSearchQuery("")}
+              className="text-muted-foreground hover:text-foreground">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* User list */}
+      <div className="flex-1 overflow-y-auto">
+        {allUsers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Search className="h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-3 text-xs text-muted-foreground">
+              {searchQuery
+                ? `No se encontró nadie con el nombre "${searchQuery}"`
+                : "No hay personas disponibles para mencionar"}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/30">
+            {allUsers.map((u) => (
+              <button
+                key={u._id}
+                type="button"
+                onClick={() => onSelect(u)}
+                className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/50"
+              >
+                <Avatar className="h-9 w-9 shrink-0 border border-border/50">
+                  {u.image ? (
+                    <img src={u.image} alt={u.name} className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      {getInitials(u.name)}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <span className="text-sm font-medium text-card-foreground">{u.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Comments Modal ─────────────────────────────────────────────
 function CommentsModal({
   post,
@@ -1127,6 +1253,12 @@ export default function Dashboard() {
     authorName: string;
     mediaUrls: LightboxItem[];
   } | null>(null);
+  const [showMentionPicker, setShowMentionPicker] = useState(false);
+  const [pendingMentions, setPendingMentions] = useState<PostMention[]>([]);
+  const pendingMentionRangeRef = useRef<{
+    node: Node;
+    offset: number;
+  } | null>(null);
 
   // ── File handling ──────────────────────────────────────────────
   const addFiles = useCallback(
@@ -1180,6 +1312,75 @@ export default function Dashboard() {
     if (editorRef.current) {
       setContent(editorRef.current.innerHTML);
     }
+    // Detect @ character for mention picker
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) return;
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      const node = range.startContainer;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent ?? "";
+        const offset = range.startOffset;
+        // Check if the character before cursor is @
+        if (offset > 0 && text[offset - 1] === "@") {
+          // Make sure there's no space between @ and cursor (fresh @)
+          const afterAt = text.slice(offset);
+          if (!afterAt.includes(" ") || afterAt.length === 0) {
+            pendingMentionRangeRef.current = { node, offset: offset - 1 };
+            setShowMentionPicker(true);
+          }
+        }
+      }
+    }
+  }, []);
+
+  const handleSelectMention = useCallback((user: MentionUser) => {
+    setShowMentionPicker(false);
+    if (!editorRef.current) return;
+
+    // Restore the selection to where @ was typed
+    const saved = pendingMentionRangeRef.current;
+    if (!saved) return;
+    pendingMentionRangeRef.current = null;
+
+    // Select from @ to current cursor
+    const sel = window.getSelection();
+    if (!sel) return;
+    const range = document.createRange();
+    range.setStart(saved.node, saved.offset);
+    range.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
+    range.deleteContents();
+
+    // Insert mention span
+    const span = document.createElement("span");
+    span.className = "mention";
+    span.setAttribute("data-mention-user-id", user._id);
+    span.setAttribute("data-mention-name", user.name);
+    span.textContent = `@${user.name}`;
+    span.contentEditable = "false";
+    range.insertNode(span);
+
+    // Move cursor after the mention span
+    const space = document.createTextNode(" ");
+    span.parentNode?.insertBefore(space, span.nextSibling);
+    const newRange = document.createRange();
+    newRange.setStartAfter(space);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+
+    // Track the mention
+    setPendingMentions((prev) => {
+      if (prev.some((m) => m.userId === user._id)) return prev;
+      return [...prev, { userId: user._id, name: user.name }];
+    });
+
+    // Sync content
+    requestAnimationFrame(() => {
+      if (editorRef.current) {
+        setContent(editorRef.current.innerHTML);
+      }
+    });
   }, []);
 
   const handleEditorKeyDown = useCallback(
@@ -1263,10 +1464,13 @@ export default function Dashboard() {
         content: contentToSend,
         media:
           uploaded.length > 0 ? (uploaded as any) : undefined,
+        mentions:
+          pendingMentions.length > 0 ? (pendingMentions as any) : undefined,
       });
 
       pendingMedia.forEach((pm) => URL.revokeObjectURL(pm.preview));
       setPendingMedia([]);
+      setPendingMentions([]);
       setContent("");
       if (editorRef.current) editorRef.current.innerHTML = "";
     } catch (err) {
@@ -1520,6 +1724,19 @@ export default function Dashboard() {
             items={lightbox.items}
             initialIndex={lightbox.index}
             onClose={() => setLightbox(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Mention picker */}
+      <AnimatePresence>
+        {showMentionPicker && (
+          <MentionPicker
+            onClose={() => {
+              setShowMentionPicker(false);
+              pendingMentionRangeRef.current = null;
+            }}
+            onSelect={handleSelectMention}
           />
         )}
       </AnimatePresence>

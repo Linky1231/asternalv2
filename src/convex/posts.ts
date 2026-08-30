@@ -45,6 +45,7 @@ export const list = query({
           authorImage: author?.image,
           mediaUrls,
           likedByMe,
+          mentions: post.mentions ?? [],
         };
       }),
     );
@@ -74,6 +75,9 @@ export const create = mutation({
         }),
       ),
     ),
+    mentions: v.optional(
+      v.array(v.object({ userId: v.string(), name: v.string() })),
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -100,6 +104,7 @@ export const create = mutation({
       createdAt: Date.now(),
       likes: 0,
       media: args.media && args.media.length > 0 ? args.media : undefined,
+      mentions: args.mentions && args.mentions.length > 0 ? args.mentions : undefined,
     });
   },
 });

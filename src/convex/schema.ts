@@ -42,6 +42,14 @@ const schema = defineSchema(
           }),
         ),
       ),
+      mentions: v.optional(
+        v.array(
+          v.object({
+            userId: v.string(),
+            name: v.string(),
+          }),
+        ),
+      ),
     }).index("by_created", ["createdAt"]),
 
     likes: defineTable({

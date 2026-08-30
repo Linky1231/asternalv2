@@ -874,8 +874,8 @@ function PostCard({
         <div className="flex items-center gap-4">
           <motion.button
             type="button"
-            whileTap={{ scale: 0.9 }}
-            transition={{ type: "spring", stiffness: 700, damping: 25 }}
+            whileTap={{ scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 800, damping: 20 }}
             onClick={() => onToggleLike(post._id)}
             className={`flex items-center gap-1.5 text-xs transition-colors duration-150 ${
               post.likedByMe
@@ -884,21 +884,20 @@ function PostCard({
             }`}
           >
             <motion.span
-              key={`${post.likedByMe}-${post.likes}-${post._id}`}
-              initial={{ scale: post.likedByMe ? 0.35 : 1.05 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 1600, damping: 12, mass: 0.2 }}
+              key={`${post.likedByMe}-${post._id}`}
+              animate={post.likedByMe ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
               className="flex items-center gap-1"
             >
               <Heart
-                className={`h-4 w-4 transition-all duration-100 ${
+                className={`h-4 w-4 transition-all duration-150 ease-out ${
                   post.likedByMe
-                    ? "fill-primary text-primary scale-110"
+                    ? "fill-primary text-primary"
                     : "fill-transparent text-current"
                 }`}
               />
-              {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
             </motion.span>
+            <span className="tabular-nums">{post.likes > 0 ? post.likes : ""}</span>
           </motion.button>
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <MessageCircle className="h-4 w-4" />

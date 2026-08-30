@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   Palette,
   Type,
+  MessageCircle,
+  Reply,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -503,7 +505,7 @@ function FormatToolbar() {
 
 
   return (
-    <div className="pt-3">
+    <div className="w-full pt-3">
       {/* Toolbar buttons row */}
       <div className="inline-flex items-center gap-0.5 rounded-xl border border-border/50 bg-muted/40 p-1">
         <Button
@@ -580,7 +582,7 @@ function FormatToolbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -2 }}
             transition={{ duration: 0.15 }}
-            className="mt-1 text-[11px] text-muted-foreground/60 italic"
+            className="mt-2 max-w-full text-[11px] text-muted-foreground/60 italic break-words"
           >
             {hint}
           </motion.p>
@@ -680,6 +682,109 @@ function FormatToolbar() {
 }
 
 // ── Post Card ──────────────────────────────────────────────────────
+function CommentItem({
+  comment,
+  currentUserId,
+  onReply,
+  postId,
+  depth = 0,
+}: {
+  comment: {
+    _id: string;
+    authorId: string;
+    content: string;
+    createdAt: number;
+    likes: number;
+    likedByMe: boolean;
+    authorName: string;
+    parentCommentId?: string;
+  };
+  currentUserId?: string;
+  onReply: (commentId: string, authorName: string) => void;
+  postId: string;
+  depth?: number;
+}) {
+  const pid = postId as any;
+  const toggleCommentLike = useMutation(api.comments.toggleLike);
+  const removeComment = useMutation(api.comments.remove);
+  const [showReplies, setShowReplies] = useState(true);
+
+  const comments = useQuery(api.comments.list, { postId: pid }) ?? [];
+  const replies = comments.filter((c) => c.parentCommentId === comment._id);
+
+  return (
+    <div className={depth > 0 ? "ml-6 border-l-2 border-border/40 pl-4" : ""}>
+      <div className="flex items-start gap-2.5 py-2.5">
+        <Avatar className="h-7 w-7 shrink-0">
+          <AvatarFallback className="bg-muted text-[10px] font-semibold">
+            {getInitials(comment.authorName)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold">{comment.authorName}</span>
+            <span className="text-[10px] text-muted-foreground">{formatTime(comment.createdAt)}</span>
+          </div>
+          <p className="mt-0.5 text-xs leading-relaxed text-card-foreground">{comment.content}</p>
+          <div className="mt-1.5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => toggleCommentLike({ commentId: comment._id as any })}
+              className={`flex items-center gap-1 text-[10px] transition-colors ${
+                comment.likedByMe ? "text-primary" : "text-muted-foreground hover:text-primary"
+              }`}
+            >
+              <Heart className={`h-3 w-3 ${comment.likedByMe ? "fill-primary" : ""}`} />
+              {comment.likes > 0 && <span>{comment.likes}</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => onReply(comment._id, comment.authorName)}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Reply className="h-3 w-3" /> Responder
+            </button>
+            {currentUserId === comment.authorId && (
+              <button
+                type="button"
+                onClick={() => removeComment({ commentId: comment._id as any })}
+                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      {/* Replies */}
+      {replies.length > 0 && (
+        <>
+          {replies.length > 2 && !showReplies && (
+            <button
+              type="button"
+              onClick={() => setShowReplies(true)}
+              className="ml-9 mb-1 text-[10px] text-primary hover:underline"
+            >
+              Ver {replies.length} respuestas
+            </button>
+          )}
+          {(showReplies || replies.length <= 2) &&
+            replies.map((reply) => (
+              <CommentItem
+                key={reply._id}
+                comment={reply}
+                currentUserId={currentUserId}
+                onReply={onReply}
+                postId={postId}
+                depth={depth + 1}
+              />
+            ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 function PostCard({
   post,
   currentUserId,
@@ -702,6 +807,25 @@ function PostCard({
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
 }) {
+  const comments = useQuery(api.comments.list, { postId: post._id as any }) ?? [];
+  const createComment = useMutation(api.comments.create);
+  const [commentText, setCommentText] = useState("");
+  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+
+  const topLevelComments = comments.filter((c) => !c.parentCommentId);
+  const commentCount = comments.length;
+
+  const handleComment = async () => {
+    if (!commentText.trim()) return;
+    await createComment({
+      postId: post._id as any,
+      content: commentText.trim(),
+      parentCommentId: replyTo?.id as any,
+    });
+    setCommentText("");
+    setReplyTo(null);
+  };
+
   return (
     <motion.div
       layout
@@ -741,61 +865,102 @@ function PostCard({
           onOpenLightbox={(i) => onOpenLightbox(post.mediaUrls, i)}
         />
       )}
-      <div className="px-5 pb-4 pt-3">
-        <div className="flex items-center gap-3">
+      <div className="px-5 pb-3 pt-3">
+        <div className="flex items-center gap-4">
           <motion.button
             type="button"
             whileTap={{ scale: 0.9 }}
             transition={{ type: "spring", stiffness: 700, damping: 25 }}
             onClick={() => onToggleLike(post._id)}
-            className={`relative flex items-center gap-1.5 text-xs transition-colors duration-200 ${
+            className={`flex items-center gap-1.5 text-xs transition-colors duration-150 ${
               post.likedByMe
                 ? "text-primary"
                 : "text-muted-foreground hover:text-primary/70"
             }`}
           >
-            {/* Heart icon with fill animation */}
             <motion.span
-              key={`heart-${post.likedByMe}-${post._id}`}
-              initial={post.likedByMe ? { scale: 0.4 } : { scale: 1.06 }}
+              key={`${post.likedByMe}-${post.likes}-${post._id}`}
+              initial={{ scale: post.likedByMe ? 0.35 : 1.05 }}
               animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 1200, damping: 10, mass: 0.3 }}
-              className="flex items-center justify-center"
+              transition={{ type: "spring", stiffness: 1600, damping: 12, mass: 0.2 }}
+              className="flex items-center gap-1"
             >
               <Heart
-                className={`h-4 w-4 transition-all duration-150 ${
+                className={`h-4 w-4 transition-all duration-100 ${
                   post.likedByMe
                     ? "fill-primary text-primary scale-110"
                     : "fill-transparent text-current"
                 }`}
               />
+              {post.likes > 0 && <span className="tabular-nums">{post.likes}</span>}
             </motion.span>
-            {/* Like count with animated number */}
-            <AnimatePresence mode="popLayout">
-              {post.likes > 0 && (
-                <motion.span
-                  key={post.likes}
-                  initial={{ y: -6, opacity: 0, scale: 0.7 }}
-                  animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: 6, opacity: 0, scale: 0.7 }}
-                  transition={{ type: "spring", stiffness: 700, damping: 16 }}
-                  className="tabular-nums"
-                >
-                  {post.likes}
-                </motion.span>
-              )}
-            </AnimatePresence>
           </motion.button>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MessageCircle className="h-4 w-4" />
+            {commentCount > 0 && <span className="tabular-nums">{commentCount}</span>}
+          </span>
           {currentUserId === post.authorId && (
             <button
               type="button"
               onClick={() => onRequestDelete(post._id)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
+              className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" /> Eliminar
             </button>
           )}
         </div>
+      </div>
+
+      {/* Comments section */}
+      <div className="border-t border-border/40 px-5 pt-3 pb-4">
+        {/* Comment input */}
+        <div className="flex items-start gap-2.5">
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarFallback className="bg-muted text-[10px] font-semibold">
+              {currentUserId ? "Tú" : "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            {replyTo && (
+              <div className="mb-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <Reply className="h-3 w-3" />
+                Respondiendo a <span className="font-medium text-foreground">{replyTo.name}</span>
+                <button type="button" onClick={() => setReplyTo(null)} className="ml-auto text-muted-foreground hover:text-foreground">✕</button>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(); } }}
+                placeholder={replyTo ? "Escribe una respuesta…" : "Escribe un comentario…"}
+                className="min-h-[32px] flex-1 bg-transparent text-xs text-card-foreground outline-none placeholder:text-muted-foreground"
+                maxLength={1000}
+              />
+              {commentText.trim() && (
+                <Button type="button" size="icon" className="h-7 w-7" onClick={handleComment}>
+                  <Send className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Comments list */}
+        {topLevelComments.length > 0 && (
+          <div className="mt-3 divide-y divide-border/30">
+            {topLevelComments.map((comment) => (
+              <CommentItem
+                key={comment._id}
+                comment={comment}
+                currentUserId={currentUserId}
+                onReply={(id, name) => setReplyTo({ id, name })}
+                postId={post._id}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </motion.div>
   );

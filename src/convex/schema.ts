@@ -50,6 +50,24 @@ const schema = defineSchema(
     })
       .index("by_post", ["postId"])
       .index("by_user_post", ["userId", "postId"]),
+
+    comments: defineTable({
+      postId: v.id("posts"),
+      authorId: v.id("users"),
+      content: v.string(),
+      createdAt: v.number(),
+      likes: v.number(),
+      parentCommentId: v.optional(v.id("comments")),
+    })
+      .index("by_post", ["postId"])
+      .index("by_parent", ["parentCommentId"]),
+
+    commentLikes: defineTable({
+      userId: v.id("users"),
+      commentId: v.id("comments"),
+    })
+      .index("by_comment", ["commentId"])
+      .index("by_user_comment", ["userId", "commentId"]),
   },
   {
     schemaValidation: false,

@@ -125,3 +125,19 @@
     cursor: pointer;
   }
 }
+
+/* Rich-text editor placeholder */
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  pointer-events: none;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+[contenteditable]:focus {
+  outline: none;
+}
+
+/* Post content formatted spans */
+.post-content span {
+  word-break: break-word;
+}

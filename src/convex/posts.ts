@@ -22,6 +22,7 @@ export const list = query({
               post.media.map(async (m) => ({
                 url: (await ctx.storage.getUrl(m.storageId)) ?? "",
                 type: m.type,
+                mime: m.mime ?? undefined,
               })),
             )
           : [];
@@ -69,6 +70,7 @@ export const create = mutation({
         v.object({
           storageId: v.string(),
           type: v.union(v.literal("image"), v.literal("video")),
+          mime: v.optional(v.string()),
         }),
       ),
     ),

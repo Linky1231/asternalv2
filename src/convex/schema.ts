@@ -38,6 +38,7 @@ const schema = defineSchema(
           v.object({
             storageId: v.string(),
             type: v.union(v.literal("image"), v.literal("video")),
+            mime: v.optional(v.string()),
           }),
         ),
       ),

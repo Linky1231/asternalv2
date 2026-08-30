@@ -37,6 +37,7 @@ interface PendingMedia {
 interface UploadedMedia {
   storageId: string;
   type: "image" | "video";
+  mime?: string;
 }
 
 function formatTime(timestamp: number) {
@@ -54,7 +55,7 @@ function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-interface LightboxItem { url: string; type: "image" | "video"; }
+interface LightboxItem { url: string; type: "image" | "video"; mime?: string; }
 
 function Lightbox({ items, initialIndex, onClose }: { items: LightboxItem[]; initialIndex: number; onClose: () => void }) {
   const [index, setIndex] = useState(initialIndex);
@@ -99,7 +100,9 @@ function Lightbox({ items, initialIndex, onClose }: { items: LightboxItem[]; ini
       )}
       <div className="flex max-h-[90vh] max-w-[90vw] items-center justify-center" onClick={(e) => e.stopPropagation()}>
         {current.type === "video" ? (
-          <video key={current.url} src={current.url} controls autoPlay playsInline className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />
+          <video key={current.url} controls autoPlay playsInline className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain">
+            <source src={current.url} type={current.mime || undefined} />
+          </video>
         ) : (
           <img key={current.url} src={current.url} alt="Tamaño completo" className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />
         )}
@@ -138,12 +141,13 @@ function SingleMedia({ item, index, onOpenLightbox }: { item: LightboxItem; inde
       <button type="button" onClick={() => onOpenLightbox(index)} className="group relative block w-full cursor-pointer bg-muted">
         {!videoError ? (
           <video
-            src={item.url}
             preload="metadata"
             muted
             className="mx-auto block max-h-80 w-full object-contain"
             onError={() => setVideoError(true)}
-          />
+          >
+            <source src={item.url} type={item.mime || undefined} />
+          </video>
         ) : (
           <div className="flex h-28 w-full items-center justify-center bg-muted">
             <Film className="h-8 w-8 text-muted-foreground/40" />
@@ -286,7 +290,7 @@ export default function Dashboard() {
             }
             const json = await result.json();
             if (json.storageId) {
-              uploaded.push({ storageId: json.storageId, type: pm.type });
+              uploaded.push({ storageId: json.storageId, type: pm.type, mime: pm.file.type || undefined });
               break;
             } else {
               lastError = "Respuesta sin storageId";

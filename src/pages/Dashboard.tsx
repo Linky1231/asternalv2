@@ -880,16 +880,24 @@ function CommentItem({
           </div>
           <p className="mt-0.5 text-xs leading-relaxed text-card-foreground">{comment.content}</p>
           <div className="mt-1.5 flex items-center gap-3">
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.8 }}
+              transition={{ type: "spring", stiffness: 600, damping: 15 }}
               onClick={() => toggleCommentLike({ commentId: comment._id as any })}
               className={`flex items-center gap-1 text-[10px] transition-colors ${
                 comment.likedByMe ? "text-primary" : "text-muted-foreground hover:text-primary"
               }`}
             >
-              <Heart className={`h-3 w-3 ${comment.likedByMe ? "fill-primary" : ""}`} />
-              {comment.likes > 0 && <span>{comment.likes}</span>}
-            </button>
+              <motion.span
+                key={`${comment.likedByMe}-${comment._id}`}
+                animate={comment.likedByMe ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <Heart className={`h-3 w-3 transition-colors duration-150 ${comment.likedByMe ? "fill-primary text-primary" : "fill-transparent"}`} />
+              </motion.span>
+              {comment.likes > 0 && <span className="tabular-nums">{comment.likes}</span>}
+            </motion.button>
             <button
               type="button"
               onClick={() => onReply(comment._id, comment.authorName)}
@@ -911,7 +919,11 @@ function CommentItem({
       </div>
       {/* Replies */}
       {replies.length > 0 && (
-        <div className="ml-4 mt-1 rounded-xl border border-border/30 bg-muted/20 pl-3 pr-1 py-1 sm:ml-6">
+        <motion.div
+          initial={false}
+          animate={{ height: "auto", opacity: 1 }}
+          className="ml-4 mt-1 overflow-hidden rounded-xl border border-border/30 bg-muted/20 pl-3 pr-1 py-1 sm:ml-6"
+        >
           {!showReplies && replies.length > 3 && (
             <button
               type="button"
@@ -921,54 +933,78 @@ function CommentItem({
               Ver más ({replies.length} respuestas)
             </button>
           )}
-          {(showReplies || replies.length <= 3) &&
-            replies.map((reply) => (
-              <CommentItem
-                key={reply._id}
-                comment={reply}
-                currentUserId={currentUserId}
-                onReply={onReply}
-                postId={postId}
-                depth={depth + 1}
-              />
-            ))}
-        </div>
+          <AnimatePresence initial={false}>
+            {(showReplies || replies.length <= 3) &&
+              replies.map((reply) => (
+                <motion.div
+                  key={reply._id}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                >
+                  <CommentItem
+                    comment={reply}
+                    currentUserId={currentUserId}
+                    onReply={onReply}
+                    postId={postId}
+                    depth={depth + 1}
+                  />
+                </motion.div>
+              ))}
+          </AnimatePresence>
+        </motion.div>
       )}
 
       {/* Delete confirmation */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-xs rounded-2xl border border-border/60 bg-card p-5 shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 6 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 6 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="mx-4 w-full max-w-xs rounded-2xl border border-border/60 bg-card p-5 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Eliminar comentario</h3>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    ¿Estás seguro de que quieres eliminar este comentario?
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold">Eliminar comentario</h3>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  ¿Estás seguro de que quieres eliminar este comentario?
-                </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    removeComment({ commentId: comment._id as any });
+                    setConfirmDelete(false);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Trash2 className="h-3 w-3" /> Eliminar
+                </Button>
               </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  removeComment({ commentId: comment._id as any });
-                  setConfirmDelete(false);
-                }}
-                className="gap-1.5"
-              >
-                <Trash2 className="h-3 w-3" /> Eliminar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1080,41 +1116,51 @@ function PostCard({
             <span className="tabular-nums">{post.likes > 0 ? post.likes : ""}</span>
           </motion.button>
           {/* Favorites (visual placeholder) */}
-          <button
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 600, damping: 15 }}
             className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-yellow-500"
           >
             <Star className="h-4 w-4" />
-          </button>
+          </motion.button>
           {/* Share */}
-          <button
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 600, damping: 15 }}
             className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
           >
             <Share2 className="h-4 w-4" />
-          </button>
+          </motion.button>
           {currentUserId === post.authorId && (
-            <button
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 600, damping: 15 }}
               onClick={() => onRequestDelete(post._id)}
               className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" /> Eliminar
-            </button>
+            </motion.button>
           )}
         </div>
       </div>
 
       {/* Comments button */}
       <div className="border-t border-border/40 px-4 py-2 sm:px-5">
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.98 }}
           onClick={() => onOpenComments({ ...post, postNumber: postNumber ?? 0 })}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
         >
           <MessageCircle className="h-4 w-4" />
           {commentCount > 0 ? `Ver ${commentCount} comentario${commentCount > 1 ? "s" : ""}` : "Escribe un comentario…"}
-        </button>
+        </motion.button>
       </div>
     </motion.div>
   );
@@ -1201,9 +1247,14 @@ function MentionPicker({
           </div>
         ) : (
           <div className="divide-y divide-border/30">
-            {allUsers.map((u) => (
-              <button
+            <AnimatePresence initial={false}>
+            {allUsers.map((u, i) => (
+              <motion.button
                 key={u._id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.15, delay: Math.min(i * 0.03, 0.3) }}
                 type="button"
                 onClick={() => onSelect(u)}
                 className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/50"
@@ -1218,8 +1269,9 @@ function MentionPicker({
                   )}
                 </Avatar>
                 <span className="text-sm font-medium text-card-foreground">{u.name}</span>
-              </button>
+              </motion.button>
             ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -1344,16 +1396,26 @@ function CommentsModal({
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {topLevelComments.map((comment) => (
-              <div key={comment._id} className="rounded-xl border border-border/40 bg-card/50 px-3 py-2">
-                <CommentItem
-                  comment={comment}
-                  currentUserId={currentUserId}
-                  onReply={(id, name) => setReplyTo({ id, name })}
-                  postId={post._id}
-                />
-              </div>
-            ))}
+            <AnimatePresence initial={false}>
+              {topLevelComments.map((comment) => (
+                <motion.div
+                  key={comment._id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  className="rounded-xl border border-border/40 bg-card/50 px-3 py-2"
+                >
+                  <CommentItem
+                    comment={comment}
+                    currentUserId={currentUserId}
+                    onReply={(id, name) => setReplyTo({ id, name })}
+                    postId={post._id}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
             <div ref={commentsEndRef} />
           </div>
         )}
@@ -1361,13 +1423,23 @@ function CommentsModal({
 
       {/* Comment input (fixed at bottom) */}
       <div className="border-t border-border/50 bg-background/95 px-4 py-3 backdrop-blur-md sm:px-5">
-        {replyTo && (
-          <div className="mb-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <Reply className="h-3 w-3" />
-            Respondiendo a <span className="font-medium text-foreground">{replyTo.name}</span>
-            <button type="button" onClick={() => setReplyTo(null)} className="ml-auto flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
-          </div>
-        )}
+        <AnimatePresence>
+          {replyTo && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden text-[10px] text-muted-foreground"
+            >
+              <div className="flex items-center gap-1.5">
+                <Reply className="h-3 w-3" />
+                Respondiendo a <span className="font-medium text-foreground">{replyTo.name}</span>
+                <button type="button" onClick={() => setReplyTo(null)} className="ml-auto flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="flex items-end gap-2">
           <Avatar className="h-7 w-7 shrink-0">
             <AvatarFallback className="bg-muted text-[10px] font-semibold">
@@ -1707,6 +1779,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       {/* ── Nav ──────────────────────────────────────────────── */}
       <nav
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
@@ -1728,7 +1803,7 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
@@ -1773,6 +1848,7 @@ export default function Dashboard() {
               {/* Media previews */}
               {pendingMedia.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  <AnimatePresence initial={false}>
                   {pendingMedia.map((pm) => (
                     <div
                       key={pm.id}
@@ -1809,8 +1885,9 @@ export default function Dashboard() {
                           ? pm.file.name.slice(0, 14) + "…"
                           : pm.file.name}
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
+                  </AnimatePresence>
                 </div>
               )}
 

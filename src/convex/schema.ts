@@ -42,6 +42,13 @@ const schema = defineSchema(
         ),
       ),
     }).index("by_created", ["createdAt"]),
+
+    likes: defineTable({
+      userId: v.id("users"),
+      postId: v.id("posts"),
+    })
+      .index("by_post", ["postId"])
+      .index("by_user_post", ["userId", "postId"]),
   },
   {
     schemaValidation: false,

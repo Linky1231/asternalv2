@@ -5,6 +5,8 @@ import { v } from "convex/values";
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+
     const posts = await ctx.db
       .query("posts")
       .withIndex("by_created")
@@ -14,6 +16,7 @@ export const list = query({
     const postsWithAuthors = await Promise.all(
       posts.map(async (post) => {
         const author = await ctx.db.get(post.authorId);
+
         const mediaUrls = post.media
           ? await Promise.all(
               post.media.map(async (m) => ({
@@ -22,11 +25,25 @@ export const list = query({
               })),
             )
           : [];
+
+        // Check if current user liked this post
+        let likedByMe = false;
+        if (userId) {
+          const existing = await ctx.db
+            .query("likes")
+            .withIndex("by_user_post", (q) =>
+              q.eq("userId", userId).eq("postId", post._id),
+            )
+            .first();
+          likedByMe = existing !== null;
+        }
+
         return {
           ...post,
-          authorName: author?.name ?? "Anonymous",
+          authorName: author?.name ?? "Anónimo",
           authorImage: author?.image,
           mediaUrls,
+          likedByMe,
         };
       }),
     );
@@ -39,7 +56,7 @@ export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new Error("No autenticado");
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -58,18 +75,21 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new Error("No autenticado");
 
-    if (args.content.trim().length === 0 && (!args.media || args.media.length === 0)) {
-      throw new Error("Post content cannot be empty");
+    if (
+      args.content.trim().length === 0 &&
+      (!args.media || args.media.length === 0)
+    ) {
+      throw new Error("La publicación no puede estar vacía");
     }
 
     if (args.content.length > 2000) {
-      throw new Error("Post is too long (max 2000 characters)");
+      throw new Error("El contenido es demasiado largo (máximo 2000 caracteres)");
     }
 
     if (args.media && args.media.length > 10) {
-      throw new Error("Maximum 10 media files per post");
+      throw new Error("Máximo 10 archivos multimedia por publicación");
     }
 
     await ctx.db.insert("posts", {
@@ -82,16 +102,34 @@ export const create = mutation({
   },
 });
 
-export const like = mutation({
+export const toggleLike = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new Error("No autenticado");
 
     const post = await ctx.db.get(args.postId);
-    if (!post) throw new Error("Post not found");
+    if (!post) throw new Error("Publicación no encontrada");
 
-    await ctx.db.patch(args.postId, { likes: post.likes + 1 });
+    // Check if already liked
+    const existing = await ctx.db
+      .query("likes")
+      .withIndex("by_user_post", (q) =>
+        q.eq("userId", userId).eq("postId", args.postId),
+      )
+      .first();
+
+    if (existing) {
+      // Unlike: remove like record and decrement count
+      await ctx.db.delete(existing._id);
+      await ctx.db.patch(args.postId, { likes: Math.max(0, post.likes - 1) });
+      return false;
+    } else {
+      // Like: create record and increment count
+      await ctx.db.insert("likes", { userId, postId: args.postId });
+      await ctx.db.patch(args.postId, { likes: post.likes + 1 });
+      return true;
+    }
   },
 });
 
@@ -99,11 +137,20 @@ export const remove = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new Error("No autenticado");
 
     const post = await ctx.db.get(args.postId);
-    if (!post) throw new Error("Post not found");
-    if (post.authorId !== userId) throw new Error("Not authorized");
+    if (!post) throw new Error("Publicación no encontrada");
+    if (post.authorId !== userId) throw new Error("No autorizado");
+
+    // Delete all likes for this post
+    const likesList = await ctx.db
+      .query("likes")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
+    for (const like of likesList) {
+      await ctx.db.delete(like._id);
+    }
 
     // Delete associated media from storage
     if (post.media) {

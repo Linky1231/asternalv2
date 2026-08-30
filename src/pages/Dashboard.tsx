@@ -505,7 +505,7 @@ function FormatToolbar() {
   return (
     <div className="pt-3">
       {/* Toolbar buttons row */}
-      <div className="flex items-center gap-1">
+      <div className="inline-flex items-center gap-0.5 rounded-xl border border-border/50 bg-muted/40 p-1">
         <Button
           type="button"
           variant="ghost"
@@ -745,7 +745,7 @@ function PostCard({
                   key={`ring-${post._id}`}
                   initial={{ scale: 0.8, opacity: 0.6 }}
                   animate={{ scale: 2, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="absolute inset-0 rounded-full border-2 border-primary/30"
                   style={{ width: 28, height: 28, margin: "auto" }}
                 />
@@ -755,7 +755,7 @@ function PostCard({
                 key={`heart-${post.likedByMe}-${post._id}`}
                 initial={post.likedByMe ? { scale: 0.6, rotate: -8 } : { scale: 1.1 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 600, damping: 14 }}
+                transition={{ type: "spring", stiffness: 800, damping: 12 }}
                 className="relative z-10 flex items-center justify-center"
               >
                 <Heart
@@ -773,7 +773,7 @@ function PostCard({
                   initial={{ y: -6, opacity: 0, scale: 0.7 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
                   exit={{ y: 6, opacity: 0, scale: 0.7 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                  transition={{ type: "spring", stiffness: 700, damping: 16 }}
                   className="tabular-nums"
                 >
                   {post.likes}

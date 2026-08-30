@@ -510,7 +510,7 @@ function FormatToolbar() {
           type="button"
           variant="ghost"
           size="sm"
-          className={`gap-1 px-2.5 ${showColors ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
+          className={`gap-1.5 px-3 ${showColors ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             setShowSizes(false);
             if (showColors) { setShowColors(false); return; }
@@ -519,15 +519,15 @@ function FormatToolbar() {
           }}
           title="Color del texto"
         >
-          <Palette className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs whitespace-nowrap">Color</span>
+          <Palette className="h-4 w-4 shrink-0" />
+          <span className="text-xs font-medium whitespace-nowrap">Color</span>
         </Button>
 
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className={`gap-1 px-2.5 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
+          className={`gap-1.5 px-3 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             setShowColors(false);
             if (showSizes) { setShowSizes(false); return; }
@@ -536,8 +536,8 @@ function FormatToolbar() {
           }}
           title="Tamaño del texto"
         >
-          <Type className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs whitespace-nowrap">Tamaño</span>
+          <Type className="h-4 w-4 shrink-0" />
+          <span className="text-xs font-medium whitespace-nowrap">Tamaño</span>
         </Button>
 
         {/* Bold */}
@@ -545,14 +545,14 @@ function FormatToolbar() {
           type="button"
           variant="ghost"
           size="sm"
-          className="px-2.5 text-muted-foreground hover:text-primary"
+          className="gap-1.5 px-3 text-muted-foreground hover:text-primary"
           onClick={() => {
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
             applyStyleToSelection({ fontWeight: "bold" });
           }}
           title="Negrita"
         >
-          <span className="text-xs font-bold">B</span>
+          <span className="text-sm font-extrabold leading-none">B</span>
         </Button>
 
         {/* Hint */}

@@ -753,24 +753,57 @@ function PostCard({
         <div className="flex items-center gap-3">
           <motion.button
             type="button"
-            whileTap={{ scale: 1.3 }}
-            transition={{ type: "spring", stiffness: 500, damping: 15 }}
+            whileTap={{ scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
             onClick={() => onToggleLike(post._id)}
-            className={`flex items-center gap-1.5 text-xs transition-colors ${
+            className={`relative flex items-center gap-1.5 text-xs transition-colors duration-200 ${
               post.likedByMe
                 ? "text-primary"
-                : "text-muted-foreground hover:text-primary"
+                : "text-muted-foreground hover:text-primary/70"
             }`}
           >
-            <motion.div
-              animate={post.likedByMe ? { scale: [1, 1.25, 1] } : { scale: 1 }}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            >
-              <Heart
-                className={`h-3.5 w-3.5 ${post.likedByMe ? "fill-primary" : ""}`}
-              />
-            </motion.div>
-            {post.likes > 0 && <span>{post.likes}</span>}
+            <span className="relative flex items-center justify-center">
+              {/* Ripple ring on like */}
+              {post.likedByMe && (
+                <motion.span
+                  key={`ring-${post._id}`}
+                  initial={{ scale: 0.6, opacity: 0.7 }}
+                  animate={{ scale: 2.2, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                  className="absolute inset-0 rounded-full border-2 border-primary/40"
+                  style={{ width: 28, height: 28, margin: "auto" }}
+                />
+              )}
+              {/* Heart icon */}
+              <motion.span
+                key={`heart-${post.likedByMe}-${post._id}`}
+                initial={post.likedByMe ? { scale: 0.5, rotate: -12 } : { scale: 1.15 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 15, mass: 0.6 }}
+                className="relative z-10 flex items-center justify-center"
+              >
+                <Heart
+                  className={`h-4 w-4 transition-colors duration-200 ${
+                    post.likedByMe ? "fill-primary text-primary" : "text-current"
+                  }`}
+                />
+              </motion.span>
+            </span>
+            {/* Like count with animated number */}
+            <AnimatePresence mode="popLayout">
+              {post.likes > 0 && (
+                <motion.span
+                  key={post.likes}
+                  initial={{ y: -8, opacity: 0, filter: "blur(2px)" }}
+                  animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                  exit={{ y: 8, opacity: 0, filter: "blur(2px)" }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  className="tabular-nums"
+                >
+                  {post.likes}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.button>
           {currentUserId === post.authorId && (
             <button

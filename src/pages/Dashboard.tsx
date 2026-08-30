@@ -49,6 +49,7 @@ const TEXT_COLORS = [
 ];
 
 const HEADING_SIZES = [
+  { label: "Normal", value: "" },
   { label: "H1", value: "24px" },
   { label: "H2", value: "20px" },
   { label: "H3", value: "17px" },
@@ -732,24 +733,29 @@ function FormatToolbar() {
             <div className="mt-2 flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Encabezado</span>
               <div className="flex gap-1">
-                {HEADING_SIZES.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${selectionHasStyle("fontSize", s.value) ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (selectionHasStyle("fontSize", s.value)) {
+                {HEADING_SIZES.map((s) => {
+                  const isDefault = !s.value;
+                  const isActive = isDefault
+                    ? !selectionHasStyle("fontSize", "24px") && !selectionHasStyle("fontSize", "20px") && !selectionHasStyle("fontSize", "17px")
+                    : selectionHasStyle("fontSize", s.value);
+                  return (
+                    <button
+                      key={s.label}
+                      type="button"
+                      className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                         removeStyleFromSelection("fontSize");
-                      } else {
-                        applyStyleToSelection("fontSize", s.value);
-                      }
-                      setShowSizes(false);
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
+                        if (!isDefault) {
+                          applyStyleToSelection("fontSize", s.value);
+                        }
+                        setShowSizes(false);
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
               </div>
               <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowSizes(false)}>✕</button>
             </div>
@@ -786,10 +792,11 @@ function CommentItem({
   const pid = postId as any;
   const toggleCommentLike = useMutation(api.comments.toggleLike);
   const removeComment = useMutation(api.comments.remove);
-  const [showReplies, setShowReplies] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const comments = useQuery(api.comments.list, { postId: pid }) ?? [];
   const replies = comments.filter((c) => c.parentCommentId === comment._id);
+  const [showReplies, setShowReplies] = useState(replies.length <= 3);
 
   return (
     <div className={depth > 0 ? "ml-6 border-l-2 border-border/40 pl-4" : ""}>
@@ -826,7 +833,7 @@ function CommentItem({
             {currentUserId === comment.authorId && (
               <button
                 type="button"
-                onClick={() => removeComment({ commentId: comment._id as any })}
+                onClick={() => setConfirmDelete(true)}
                 className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
               >
                 <Trash2 className="h-3 w-3" />
@@ -837,17 +844,17 @@ function CommentItem({
       </div>
       {/* Replies */}
       {replies.length > 0 && (
-        <>
-          {replies.length > 2 && !showReplies && (
+        <div className="ml-4 mt-1 rounded-xl border border-border/30 bg-muted/20 pl-3 pr-1 py-1 sm:ml-6">
+          {!showReplies && replies.length > 3 && (
             <button
               type="button"
               onClick={() => setShowReplies(true)}
-              className="ml-9 mb-1 text-[10px] text-primary hover:underline"
+              className="mb-1 pl-6 text-[10px] font-medium text-primary hover:underline"
             >
-              Ver {replies.length} respuestas
+              Ver más ({replies.length} respuestas)
             </button>
           )}
-          {(showReplies || replies.length <= 2) &&
+          {(showReplies || replies.length <= 3) &&
             replies.map((reply) => (
               <CommentItem
                 key={reply._id}
@@ -858,7 +865,42 @@ function CommentItem({
                 depth={depth + 1}
               />
             ))}
-        </>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-xs rounded-2xl border border-border/60 bg-card p-5 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">Eliminar comentario</h3>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  ¿Estás seguro de que quieres eliminar este comentario?
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  removeComment({ commentId: comment._id as any });
+                  setConfirmDelete(false);
+                }}
+                className="gap-1.5"
+              >
+                <Trash2 className="h-3 w-3" /> Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

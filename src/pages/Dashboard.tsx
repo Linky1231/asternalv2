@@ -187,20 +187,34 @@ function useVideoObjectUrl(url: string, mime: string) {
 }
 
 // ── Selection formatting helper ────────────────────────────────────
-/** Check if the current selection has a given inline style. */
+/** Walk up from a node to find the closest ancestor (or self) that is a styled span. */
+function findStyledAncestor(node: Node, prop: string): HTMLElement | null {
+  let current: Node | null = node;
+  while (current && current !== document.body) {
+    if (
+      current instanceof HTMLElement &&
+      current.tagName === "SPAN" &&
+      (current.style as any)[prop]
+    ) {
+      return current;
+    }
+    current = current.parentNode;
+  }
+  return null;
+}
+
+/** Check if the selection has a given inline style by walking DOM ancestors. */
 function selectionHasStyle(prop: string, value: string): boolean {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
   const range = sel.getRangeAt(0);
-  const fragment = range.cloneContents();
-  const spans = Array.from(fragment.querySelectorAll("span"));
-  return spans.some((s) => {
-    const v = (s.style as any)[prop];
-    if (!v) return false;
-    if (prop === "fontWeight") return v === "bold" || parseInt(v) >= 700;
-    if (prop === "textDecoration") return v.includes("underline");
-    return v === value;
-  });
+  // Check the anchor node (where selection starts)
+  const anchor = findStyledAncestor(range.startContainer, prop);
+  if (!anchor) return false;
+  const v = (anchor.style as any)[prop];
+  if (prop === "fontWeight") return v === "bold" || parseInt(v) >= 700;
+  if (prop === "textDecoration") return v.includes("underline");
+  return v === value;
 }
 
 /** Remove a specific inline style from the selection, unwrapping empty spans. */
@@ -226,7 +240,7 @@ function removeStyleFromSelection(prop: string) {
   sel.removeAllRanges();
 }
 
-/** Apply or toggle an inline style on the selection. */
+/** Apply an inline style to the selection by wrapping in a span. */
 function applyStyleToSelection(style: Record<string, string>) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
@@ -609,11 +623,10 @@ function FormatToolbar() {
           className={`gap-1.5 px-3 ${selectionHasStyle("fontWeight", "bold") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            if (selectionHasStyle("fontWeight", "bold")) {
-              removeStyleFromSelection("fontWeight");
-            } else {
-              applyStyleToSelection({ fontWeight: "bold" });
-            }
+            // Use execCommand for reliable toggle, then sync content
+            document.execCommand("bold");
+            // Also remove any custom span fontWeight if present
+            removeStyleFromSelection("fontWeight");
           }}
           title="Negrita"
         >
@@ -628,11 +641,10 @@ function FormatToolbar() {
           className={`gap-1.5 px-3 ${selectionHasStyle("textDecoration", "underline") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            if (selectionHasStyle("textDecoration", "underline")) {
-              removeStyleFromSelection("textDecoration");
-            } else {
-              applyStyleToSelection({ textDecoration: "underline" });
-            }
+            // Use execCommand for reliable toggle, then sync content
+            document.execCommand("underline");
+            // Also remove any custom span textDecoration if present
+            removeStyleFromSelection("textDecoration");
           }}
           title="Subrayado"
         >

@@ -1177,39 +1177,29 @@ function CommentsModal({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/50 bg-background/80 px-4 py-3 backdrop-blur-xl">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold">{post.title || `Publicación sin título de ${post.authorName}`}</h3>
-          <p className="text-[10px] text-muted-foreground">
-            Publicación n.º {post.postNumber} · {commentCount} comentario{commentCount !== 1 ? "s" : ""}
-          </p>
-        </div>
-      </div>
-
-      {/* Post preview */}
-      <div className="border-b-2 border-border/60 bg-card/30 px-5 py-4">
-        <p className="mb-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Publicación</p>
-        <div className="flex items-start gap-3">
+      <div className="border-b border-border/50 bg-background/80 px-5 py-4 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <Avatar className="h-9 w-9 shrink-0 border border-border/50">
             <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
               {getInitials(post.authorName)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{post.authorName}</span>
-              <span className="text-[10px] text-muted-foreground/60">· {formatTime(post.createdAt)}</span>
-            </div>
-            {post.title && (
-              <p className="mt-1 text-sm font-bold text-card-foreground">{post.title}</p>
+            {post.title ? (
+              <h3 className="truncate text-sm font-bold text-card-foreground">{post.title}</h3>
+            ) : (
+              <h3 className="truncate text-sm font-semibold text-card-foreground">{post.authorName}</h3>
             )}
+            <p className="text-[10px] text-muted-foreground">
+              Publicación n.º {post.postNumber} · {post.authorName} · {formatTime(post.createdAt)} · {commentCount} comentario{commentCount !== 1 ? "s" : ""}
+            </p>
           </div>
         </div>
       </div>

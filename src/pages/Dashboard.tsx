@@ -187,6 +187,46 @@ function useVideoObjectUrl(url: string, mime: string) {
 }
 
 // ── Selection formatting helper ────────────────────────────────────
+/** Check if the current selection has a given inline style. */
+function selectionHasStyle(prop: string, value: string): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const fragment = range.cloneContents();
+  const spans = Array.from(fragment.querySelectorAll("span"));
+  return spans.some((s) => {
+    const v = (s.style as any)[prop];
+    if (!v) return false;
+    if (prop === "fontWeight") return v === "bold" || parseInt(v) >= 700;
+    if (prop === "textDecoration") return v.includes("underline");
+    return v === value;
+  });
+}
+
+/** Remove a specific inline style from the selection, unwrapping empty spans. */
+function removeStyleFromSelection(prop: string) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  const fragment = range.extractContents();
+  const walk = (node: Node) => {
+    if (node instanceof HTMLElement && node.tagName === "SPAN") {
+      (node.style as any).removeProperty(prop);
+      if (!node.getAttribute("style") || node.getAttribute("style") === "") {
+        const parent = node.parentNode;
+        while (node.firstChild) parent?.insertBefore(node.firstChild, node);
+        parent?.removeChild(node);
+      } else {
+        Array.from(node.childNodes).forEach(walk);
+      }
+    }
+  };
+  Array.from(fragment.childNodes).forEach(walk);
+  range.insertNode(fragment);
+  sel.removeAllRanges();
+}
+
+/** Apply or toggle an inline style on the selection. */
 function applyStyleToSelection(style: Record<string, string>) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
@@ -566,10 +606,14 @@ function FormatToolbar() {
           type="button"
           variant="ghost"
           size="sm"
-          className="gap-1.5 px-3 text-muted-foreground hover:text-primary"
+          className={`gap-1.5 px-3 ${selectionHasStyle("fontWeight", "bold") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            applyStyleToSelection({ fontWeight: "bold" });
+            if (selectionHasStyle("fontWeight", "bold")) {
+              removeStyleFromSelection("fontWeight");
+            } else {
+              applyStyleToSelection({ fontWeight: "bold" });
+            }
           }}
           title="Negrita"
         >
@@ -581,10 +625,14 @@ function FormatToolbar() {
           type="button"
           variant="ghost"
           size="sm"
-          className="gap-1.5 px-3 text-muted-foreground hover:text-primary"
+          className={`gap-1.5 px-3 ${selectionHasStyle("textDecoration", "underline") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            applyStyleToSelection({ textDecoration: "underline" });
+            if (selectionHasStyle("textDecoration", "underline")) {
+              removeStyleFromSelection("textDecoration");
+            } else {
+              applyStyleToSelection({ textDecoration: "underline" });
+            }
           }}
           title="Subrayado"
         >
@@ -631,26 +679,14 @@ function FormatToolbar() {
                     onMouseDown={(e) => {
                       e.preventDefault();
                       if (c.value) {
-                        applyStyleToSelection({ color: c.value });
-                      } else {
-                        const sel = window.getSelection();
-                        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-                          const range = sel.getRangeAt(0);
-                          const fragment = range.extractContents();
-                          const walk = (node: Node) => {
-                            if (node instanceof HTMLElement && node.tagName === "SPAN") {
-                              node.style.removeProperty("color");
-                              if (!node.getAttribute("style") || node.getAttribute("style") === "") {
-                                const parent = node.parentNode;
-                                while (node.firstChild) parent?.insertBefore(node.firstChild, node);
-                                parent?.removeChild(node);
-                              } else { Array.from(node.childNodes).forEach(walk); }
-                            }
-                          };
-                          Array.from(fragment.childNodes).forEach(walk);
-                          range.insertNode(fragment);
-                          sel.removeAllRanges();
+                        // Toggle: if same color is already applied, remove it
+                        if (selectionHasStyle("color", c.value)) {
+                          removeStyleFromSelection("color");
+                        } else {
+                          applyStyleToSelection({ color: c.value });
                         }
+                      } else {
+                        removeStyleFromSelection("color");
                       }
                       setShowColors(false);
                     }}
@@ -684,8 +720,16 @@ function FormatToolbar() {
                   <button
                     key={s.value}
                     type="button"
-                    className="rounded-lg px-3 py-1 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                    onMouseDown={(e) => { e.preventDefault(); applyStyleToSelection({ fontSize: s.value }); setShowSizes(false); }}
+                    className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${selectionHasStyle("fontSize", s.value) ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (selectionHasStyle("fontSize", s.value)) {
+                        removeStyleFromSelection("fontSize");
+                      } else {
+                        applyStyleToSelection({ fontSize: s.value });
+                      }
+                      setShowSizes(false);
+                    }}
                   >
                     {s.label}
                   </button>

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,6 +14,7 @@ import {
   ImagePlus,
   X,
   Film,
+  Play,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,56 +59,218 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
-function MediaGrid({ media }: { media: { url: string; type: "image" | "video" }[] }) {
-  if (!media || media.length === 0) return null;
+/* ─── Lightbox ───────────────────────────────────────────────────────────── */
 
-  const gridClass =
-    media.length === 1
-      ? "grid-cols-1"
-      : media.length === 2
-        ? "grid-cols-2"
-        : "grid-cols-2";
+interface LightboxItem {
+  url: string;
+  type: "image" | "video";
+}
+
+function Lightbox({
+  items,
+  initialIndex,
+  onClose,
+}: {
+  items: LightboxItem[];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const [index, setIndex] = useState(initialIndex);
+  const current = items[index];
+
+  // Lock body scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  // Escape to close
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight" && index < items.length - 1) setIndex((i) => i + 1);
+      if (e.key === "ArrowLeft" && index > 0) setIndex((i) => i - 1);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [index, items.length, onClose]);
+
+  const hasNav = items.length > 1;
 
   return (
-    <div className={`mt-3 grid gap-2 ${gridClass}`}>
-      {media.map((m, i) =>
-        m.type === "video" ? (
-          <div
-            key={i}
-            className="relative overflow-hidden rounded-xl border border-border/40 bg-muted"
-          >
-            <video
-              src={m.url}
-              controls
-              preload="metadata"
-              className="w-full object-cover"
-              style={{ maxHeight: 320 }}
-            />
-          </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
+      onClick={onClose}
+    >
+      {/* Close */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 z-[110] flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {/* Counter */}
+      {hasNav && (
+        <div className="absolute top-4 left-1/2 z-[110] -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+          {index + 1} / {items.length}
+        </div>
+      )}
+
+      {/* Prev */}
+      {hasNav && index > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIndex((i) => i - 1);
+          }}
+          className="absolute left-3 top-1/2 z-[110] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+          aria-label="Previous"
+        >
+          ‹
+        </button>
+      )}
+
+      {/* Next */}
+      {hasNav && index < items.length - 1 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIndex((i) => i + 1);
+          }}
+          className="absolute right-3 top-1/2 z-[110] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+          aria-label="Next"
+        >
+          ›
+        </button>
+      )}
+
+      {/* Media */}
+      <div
+        className="flex max-h-[90vh] max-w-[90vw] items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {current.type === "video" ? (
+          <video
+            key={current.url}
+            src={current.url}
+            controls
+            autoPlay
+            className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain"
+          />
         ) : (
-          <div
-            key={i}
-            className="relative overflow-hidden rounded-xl border border-border/40"
-          >
-            <img
-              src={m.url}
-              alt={`Media ${i + 1}`}
-              className="w-full object-cover"
-              style={{ maxHeight: 320 }}
-              loading="lazy"
+          <img
+            key={current.url}
+            src={current.url}
+            alt="Full size"
+            className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain"
+          />
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Media Grid (feed) ──────────────────────────────────────────────────── */
+
+function MediaGrid({
+  media,
+  onOpenLightbox,
+}: {
+  media: LightboxItem[];
+  onOpenLightbox: (index: number) => void;
+}) {
+  if (!media || media.length === 0) return null;
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-border/40">
+      {media.length === 1 ? (
+        /* Single media: natural aspect, contained */
+        <SingleMedia item={media[0]} index={0} onOpenLightbox={onOpenLightbox} />
+      ) : (
+        /* Multiple: 2-col grid, each cell contained */
+        <div className="grid grid-cols-2 gap-px bg-border/30">
+          {media.map((m, i) => (
+            <SingleMedia
+              key={i}
+              item={m}
+              index={i}
+              onOpenLightbox={onOpenLightbox}
             />
-          </div>
-        ),
+          ))}
+        </div>
       )}
     </div>
   );
 }
+
+function SingleMedia({
+  item,
+  index,
+  onOpenLightbox,
+}: {
+  item: LightboxItem;
+  index: number;
+  onOpenLightbox: (i: number) => void;
+}) {
+  if (item.type === "video") {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpenLightbox(index)}
+        className="group relative block w-full cursor-pointer bg-muted"
+      >
+        <video
+          src={item.url}
+          preload="metadata"
+          muted
+          className="mx-auto block max-h-80 w-full object-contain"
+        />
+        {/* Play overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm">
+            <Play className="ml-0.5 h-5 w-5" />
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenLightbox(index)}
+      className="block w-full cursor-pointer bg-muted"
+    >
+      <img
+        src={item.url}
+        alt={`Image ${index + 1}`}
+        loading="lazy"
+        className="mx-auto block max-h-80 w-full object-contain"
+      />
+    </button>
+  );
+}
+
+/* ─── PostCard ───────────────────────────────────────────────────────────── */
 
 function PostCard({
   post,
   currentUserId,
   onLike,
   onDelete,
+  onOpenLightbox,
 }: {
   post: {
     _id: string;
@@ -117,11 +280,12 @@ function PostCard({
     likes: number;
     authorName: string;
     authorImage?: string;
-    mediaUrls: { url: string; type: "image" | "video" }[];
+    mediaUrls: LightboxItem[];
   };
   currentUserId?: string;
   onLike: (postId: string) => void;
   onDelete: (postId: string) => void;
+  onOpenLightbox: (media: LightboxItem[], index: number) => void;
 }) {
   return (
     <motion.div
@@ -129,52 +293,66 @@ function PostCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      className="rounded-2xl border border-border/60 bg-card p-5 transition-colors hover:border-border"
+      className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-border"
     >
-      <div className="flex items-start gap-3.5">
-        <Avatar className="h-10 w-10 shrink-0 border border-border/50">
-          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-            {getInitials(post.authorName)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">{post.authorName}</span>
-            <span className="text-xs text-muted-foreground">
-              {formatTime(post.createdAt)}
-            </span>
-          </div>
-          {post.content && (
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-card-foreground">
-              {post.content}
-            </p>
-          )}
-          <MediaGrid media={post.mediaUrls} />
-          <div className="mt-3 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => onLike(post._id)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
-            >
-              <Heart className="h-3.5 w-3.5" />
-              {post.likes > 0 && <span>{post.likes}</span>}
-            </button>
-            {currentUserId === post.authorId && (
-              <button
-                type="button"
-                onClick={() => onDelete(post._id)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
-              </button>
+      <div className="p-5">
+        <div className="flex items-start gap-3.5">
+          <Avatar className="h-10 w-10 shrink-0 border border-border/50">
+            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+              {getInitials(post.authorName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">{post.authorName}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatTime(post.createdAt)}
+              </span>
+            </div>
+            {post.content && (
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-card-foreground">
+                {post.content}
+              </p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Media — sits below the text area, flush to card edges */}
+      {post.mediaUrls.length > 0 && (
+        <MediaGrid
+          media={post.mediaUrls}
+          onOpenLightbox={(i) => onOpenLightbox(post.mediaUrls, i)}
+        />
+      )}
+
+      <div className="px-5 pb-4 pt-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onLike(post._id)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
+          >
+            <Heart className="h-3.5 w-3.5" />
+            {post.likes > 0 && <span>{post.likes}</span>}
+          </button>
+          {currentUserId === post.authorId && (
+            <button
+              type="button"
+              onClick={() => onDelete(post._id)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+          )}
         </div>
       </div>
     </motion.div>
   );
 }
+
+/* ─── Dashboard ──────────────────────────────────────────────────────────── */
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -190,6 +368,12 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Lightbox state
+  const [lightbox, setLightbox] = useState<{
+    items: LightboxItem[];
+    index: number;
+  } | null>(null);
 
   const addFiles = useCallback(
     (files: FileList | File[]) => {
@@ -273,7 +457,6 @@ export default function Dashboard() {
             : undefined,
       });
 
-      // Clean up local previews
       pendingMedia.forEach((pm) => URL.revokeObjectURL(pm.preview));
       setPendingMedia([]);
       setContent("");
@@ -305,6 +488,9 @@ export default function Dashboard() {
     await signOut();
     navigate("/");
   };
+
+  const openLightbox = (items: LightboxItem[], index: number) =>
+    setLightbox({ items, index });
 
   const isPostable = content.trim() || pendingMedia.length > 0;
 
@@ -366,19 +552,19 @@ export default function Dashboard() {
                   {pendingMedia.map((pm) => (
                     <div
                       key={pm.id}
-                      className="group relative overflow-hidden rounded-xl border border-border/40"
+                      className="group relative overflow-hidden rounded-xl border border-border/40 bg-muted"
                     >
                       {pm.type === "video" ? (
                         <video
                           src={pm.preview}
-                          className="h-28 w-full object-cover"
+                          className="h-28 w-full object-contain"
                           muted
                         />
                       ) : (
                         <img
                           src={pm.preview}
                           alt={pm.file.name}
-                          className="h-28 w-full object-cover"
+                          className="h-28 w-full object-contain"
                         />
                       )}
                       <button
@@ -489,12 +675,24 @@ export default function Dashboard() {
                   currentUserId={user?._id}
                   onLike={handleLike}
                   onDelete={handleDelete}
+                  onOpenLightbox={openLightbox}
                 />
               ))
             )}
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightbox && (
+          <Lightbox
+            items={lightbox.items}
+            initialIndex={lightbox.index}
+            onClose={() => setLightbox(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

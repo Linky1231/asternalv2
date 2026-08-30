@@ -48,12 +48,10 @@ const TEXT_COLORS = [
   { label: "Celeste", value: "#0891b2" },
 ];
 
-const FONT_SIZES = [
-  { label: "XS", value: "12px" },
-  { label: "S", value: "14px" },
-  { label: "M", value: "16px" },
-  { label: "L", value: "20px" },
-  { label: "XL", value: "26px" },
+const HEADING_SIZES = [
+  { label: "H1", value: "32px" },
+  { label: "H2", value: "24px" },
+  { label: "H3", value: "20px" },
 ];
 
 // ── Interfaces ─────────────────────────────────────────────────────
@@ -188,97 +186,84 @@ function useVideoObjectUrl(url: string, mime: string) {
 
 // ── Selection formatting helper ────────────────────────────────────
 /**
- * Toggle an inline style on the current selection.
- * If the selection already has the style, remove it.
- * If not, apply it.
- * Works in a single DOM pass to avoid selection issues.
+ * Remove a specific style from all spans in a document fragment,
+ * unwrapping spans that become empty.
  */
-function toggleStyleOnSelection(prop: string, value: string) {
+function removeStyleFromFragment(fragment: DocumentFragment, prop: string) {
+  const walk = (node: Node) => {
+    if (node instanceof HTMLElement && node.tagName === "SPAN") {
+      (node.style as any).removeProperty(prop);
+      if (!node.getAttribute("style") || node.getAttribute("style") === "") {
+        const parent = node.parentNode;
+        while (node.firstChild) parent?.insertBefore(node.firstChild, node);
+        parent?.removeChild(node);
+      } else {
+        Array.from(node.childNodes).forEach(walk);
+      }
+    }
+  };
+  Array.from(fragment.childNodes).forEach(walk);
+}
+
+/**
+ * Remove a specific style from the selection in the live DOM,
+ * unwrapping empty spans. Works by walking the DOM tree
+ * within the selection range.
+ */
+function removeStyleFromSelection(prop: string) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
   const range = sel.getRangeAt(0);
   const fragment = range.extractContents();
-
-  // If value is empty, always remove (used by "Predeterminado")
-  if (!value) {
-    const walk = (node: Node) => {
-      if (node instanceof HTMLElement && node.tagName === "SPAN") {
-        (node.style as any).removeProperty(prop);
-        if (!node.getAttribute("style") || node.getAttribute("style") === "") {
-          const parent = node.parentNode;
-          while (node.firstChild) parent?.insertBefore(node.firstChild, node);
-          parent?.removeChild(node);
-        } else {
-          Array.from(node.childNodes).forEach(walk);
-        }
-      }
-    };
-    Array.from(fragment.childNodes).forEach(walk);
-    range.insertNode(fragment);
-    sel.removeAllRanges();
-    return;
-  }
-
-  // Check if the style is already applied to the entire selection
-  const spans = Array.from(fragment.querySelectorAll("span"));
-  const hasStyle = spans.length > 0 && spans.every((s) => {
-    const v = (s.style as any)[prop];
-    if (!v) return false;
-    return v === value;
-  });
-
-  if (hasStyle) {
-    // Remove the style
-    const walk = (node: Node) => {
-      if (node instanceof HTMLElement && node.tagName === "SPAN") {
-        (node.style as any).removeProperty(prop);
-        if (!node.getAttribute("style") || node.getAttribute("style") === "") {
-          const parent = node.parentNode;
-          while (node.firstChild) parent?.insertBefore(node.firstChild, node);
-          parent?.removeChild(node);
-        } else {
-          Array.from(node.childNodes).forEach(walk);
-        }
-      }
-    };
-    Array.from(fragment.childNodes).forEach(walk);
-  } else {
-    // Apply the style
-    const span = document.createElement("span");
-    (span.style as any)[prop] = value;
-    span.appendChild(fragment);
-    range.insertNode(span);
-    sel.removeAllRanges();
-    return;
-  }
-
+  removeStyleFromFragment(fragment, prop);
   range.insertNode(fragment);
   sel.removeAllRanges();
 }
 
 /**
- * Check if the selection has a given inline style.
- * Uses document.queryCommandState for native commands (bold, underline)
- * and DOM ancestor walking for custom styles (color, fontSize).
+ * Apply a style to the selection. Removes any existing value of that
+ * property first (so only one value is active per property),
+ * then wraps the selection in a new styled span.
+ */
+function applyStyleToSelection(prop: string, value: string) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  const fragment = range.extractContents();
+  // Remove any existing value of this property first
+  removeStyleFromFragment(fragment, prop);
+  const span = document.createElement("span");
+  (span.style as any)[prop] = value;
+  span.appendChild(fragment);
+  range.insertNode(span);
+  sel.removeAllRanges();
+}
+
+/**
+ * Check if the current selection has a given style applied.
+ * Uses native queryCommandState for bold/underline,
+ * and computed style for custom properties (color, fontSize).
  */
 function selectionHasStyle(prop: string, value: string): boolean {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
-
-  // For bold/underline, use native command state (most reliable)
+  // Bold / underline: use native detection
   if (prop === "fontWeight") return document.queryCommandState("bold");
   if (prop === "textDecoration") return document.queryCommandState("underline");
-
-  // For custom styles, walk ancestors
-  let node: Node | null = sel.getRangeAt(0).startContainer;
-  while (node && node !== document.body) {
-    if (node instanceof HTMLElement && node.tagName === "SPAN") {
-      const v = (node.style as any)[prop];
-      if (v && v === value) return true;
-    }
-    node = node.parentNode;
+  // For color / fontSize: check computed style at the anchor node
+  const node = sel.getRangeAt(0).startContainer;
+  const el = node instanceof HTMLElement ? node : node.parentElement;
+  if (!el) return false;
+  const computed = window.getComputedStyle(el);
+  const actual = (computed as any)[prop];
+  if (!actual) return false;
+  // Normalize px values for fontSize comparison
+  if (prop === "fontSize") {
+    const target = parseFloat(value);
+    const current = parseFloat(actual);
+    return Math.abs(target - current) < 1;
   }
-  return false;
+  return actual === value;
 }
 
 // ── Lightbox ───────────────────────────────────────────────────────
@@ -712,11 +697,12 @@ function FormatToolbar() {
                     style={{ backgroundColor: c.value || "var(--card-foreground)" }}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      if (c.value) {
-                        toggleStyleOnSelection("color", c.value);
+                      if (selectionHasStyle("color", c.value)) {
+                        removeStyleFromSelection("color");
+                      } else if (c.value) {
+                        applyStyleToSelection("color", c.value);
                       } else {
-                        // "Predeterminado" — remove any color
-                        toggleStyleOnSelection("color", "");
+                        removeStyleFromSelection("color");
                       }
                       setShowColors(false);
                     }}
@@ -726,7 +712,7 @@ function FormatToolbar() {
               <input
                 type="color"
                 className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
-                onChange={(e) => { toggleStyleOnSelection("color", e.target.value); setShowColors(false); }}
+                onChange={(e) => { applyStyleToSelection("color", e.target.value); setShowColors(false); }}
               />
               <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowColors(false)}>✕</button>
             </div>
@@ -744,16 +730,20 @@ function FormatToolbar() {
             className="overflow-hidden"
           >
             <div className="mt-2 flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tamaño</span>
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Encabezado</span>
               <div className="flex gap-1">
-                {FONT_SIZES.map((s) => (
+                {HEADING_SIZES.map((s) => (
                   <button
                     key={s.value}
                     type="button"
-                    className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${selectionHasStyle("fontSize", s.value) ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
+                    className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${selectionHasStyle("fontSize", s.value) ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      toggleStyleOnSelection("fontSize", s.value);
+                      if (selectionHasStyle("fontSize", s.value)) {
+                        removeStyleFromSelection("fontSize");
+                      } else {
+                        applyStyleToSelection("fontSize", s.value);
+                      }
                       setShowSizes(false);
                     }}
                   >

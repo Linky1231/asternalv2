@@ -33,6 +33,14 @@ const schema = defineSchema(
       content: v.string(),
       createdAt: v.number(),
       likes: v.number(),
+      media: v.optional(
+        v.array(
+          v.object({
+            storageId: v.string(),
+            type: v.union(v.literal("image"), v.literal("video")),
+          }),
+        ),
+      ),
     }).index("by_created", ["createdAt"]),
   },
   {

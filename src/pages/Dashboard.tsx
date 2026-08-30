@@ -782,7 +782,7 @@ function FormatToolbar() {
                 className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
                 onChange={(e) => { applyStyleToSelection("color", e.target.value); setShowColors(false); }}
               />
-              <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowColors(false)}>✕</button>
+              <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowColors(false)}><X className="h-3 w-3" /></button>
             </div>
           </motion.div>
         )}
@@ -824,7 +824,7 @@ function FormatToolbar() {
                   );
                 })}
               </div>
-              <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowSizes(false)}>✕</button>
+              <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowSizes(false)}><X className="h-3 w-3" /></button>
             </div>
           </motion.div>
         )}
@@ -990,11 +990,14 @@ function PostCard({
     createdAt: number;
     likes: number;
     likedByMe: boolean;
+    favorites: number;
+    favoritedByMe: boolean;
     authorName: string;
     mediaUrls: LightboxItem[];
   };
   currentUserId?: string;
   onToggleLike: (postId: string) => void;
+  onToggleFavorite: (postId: string) => void;
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
   onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[]; postNumber: number }) => void;
@@ -1048,7 +1051,7 @@ function PostCard({
         />
       )}
       <div className="px-4 pb-3 pt-3 sm:px-5">
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-4 sm:gap-5">
           <motion.button
             type="button"
             whileTap={{ scale: 0.85 }}
@@ -1079,9 +1082,15 @@ function PostCard({
           {/* Favorites */}
           <button
             type="button"
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-yellow-500"
+            onClick={() => onToggleFavorite(post._id)}
+            className={`flex items-center gap-1 text-xs transition-colors ${
+              post.favoritedByMe
+                ? "text-yellow-500"
+                : "text-muted-foreground hover:text-yellow-500"
+            }`}
           >
-            <Star className="h-4 w-4" />
+            <Star className={`h-4 w-4 transition-all duration-150 ${post.favoritedByMe ? "fill-yellow-500" : "fill-transparent"}`} />
+            {post.favorites > 0 && <span className="tabular-nums">{post.favorites}</span>}
           </button>
           {/* Share */}
           <button
@@ -1362,7 +1371,7 @@ function CommentsModal({
           <div className="mb-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Reply className="h-3 w-3" />
             Respondiendo a <span className="font-medium text-foreground">{replyTo.name}</span>
-            <button type="button" onClick={() => setReplyTo(null)} className="ml-auto text-muted-foreground hover:text-foreground">✕</button>
+            <button type="button" onClick={() => setReplyTo(null)} className="ml-auto flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
           </div>
         )}
         <div className="flex items-end gap-2">
@@ -1411,6 +1420,7 @@ export default function Dashboard() {
   const createPost = useMutation(api.posts.create);
   const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
   const toggleLikeMutation = useMutation(api.posts.toggleLike);
+  const toggleFavoriteMutation = useMutation(api.posts.toggleFavorite);
   const deletePost = useMutation(api.posts.remove);
 
   const [content, setContent] = useState("");
@@ -1672,6 +1682,13 @@ export default function Dashboard() {
       console.error("Error al dar me gusta:", err);
     }
   };
+  const handleToggleFavorite = async (postId: string) => {
+    try {
+      await toggleFavoriteMutation({ postId: postId as any });
+    } catch (err) {
+      console.error("Error al marcar favorito:", err);
+    }
+  };
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -1899,6 +1916,7 @@ export default function Dashboard() {
                   post={post}
                   currentUserId={user?._id}
                   onToggleLike={handleToggleLike}
+                  onToggleFavorite={handleToggleFavorite}
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}
                   onOpenComments={setCommentsModalPost}

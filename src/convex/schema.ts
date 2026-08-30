@@ -34,6 +34,7 @@ const schema = defineSchema(
       content: v.string(),
       createdAt: v.number(),
       likes: v.number(),
+      favorites: v.number(),
       media: v.optional(
         v.array(
           v.object({
@@ -70,6 +71,13 @@ const schema = defineSchema(
     })
       .index("by_post", ["postId"])
       .index("by_parent", ["parentCommentId"]),
+
+    favorites: defineTable({
+      userId: v.id("users"),
+      postId: v.id("posts"),
+    })
+      .index("by_post", ["postId"])
+      .index("by_user_post", ["userId", "postId"]),
 
     commentLikes: defineTable({
       userId: v.id("users"),

@@ -39,14 +39,27 @@ export const list = query({
           likedByMe = existing !== null;
         }
 
+        let favoritedByMe = false;
+        if (userId) {
+          const existing = await ctx.db
+            .query("favorites")
+            .withIndex("by_user_post", (q) =>
+              q.eq("userId", userId).eq("postId", post._id),
+            )
+            .first();
+          favoritedByMe = existing !== null;
+        }
+
         return {
           ...post,
           authorName: author?.name ?? "Anónimo",
           authorImage: author?.image,
           mediaUrls,
           likedByMe,
+          favoritedByMe: favoritedByMe,
           mentions: post.mentions ?? [],
           title: post.title ?? undefined,
+          favorites: post.favorites,
         };
       }),
     );
@@ -106,6 +119,7 @@ export const create = mutation({
       content: args.content.trim(),
       createdAt: Date.now(),
       likes: 0,
+      favorites: 0,
       media: args.media && args.media.length > 0 ? args.media : undefined,
       mentions: args.mentions && args.mentions.length > 0 ? args.mentions : undefined,
     });
@@ -162,6 +176,15 @@ export const remove = mutation({
       await ctx.db.delete(like._id);
     }
 
+    // Delete all favorites for this post
+    const favsList = await ctx.db
+      .query("favorites")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
+    for (const fav of favsList) {
+      await ctx.db.delete(fav._id);
+    }
+
     // Delete associated media from storage
     if (post.media) {
       for (const m of post.media) {
@@ -170,5 +193,33 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.postId);
+  },
+});
+
+export const toggleFavorite = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("No autenticado");
+
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Publicación no encontrada");
+
+    const existing = await ctx.db
+      .query("favorites")
+      .withIndex("by_user_post", (q) =>
+        q.eq("userId", userId).eq("postId", args.postId),
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      await ctx.db.patch(args.postId, { favorites: Math.max(0, post.favorites - 1) });
+      return false;
+    } else {
+      await ctx.db.insert("favorites", { userId, postId: args.postId });
+      await ctx.db.patch(args.postId, { favorites: post.favorites + 1 });
+      return true;
+    }
   },
 });

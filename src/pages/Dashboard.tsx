@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Sparkles,
   Heart,
   Trash2,
   Send,
@@ -504,22 +503,22 @@ function FormatToolbar() {
   }, [showColors, showSizes]);
 
   return (
-    <div className="flex items-center gap-1 pt-3">
+    <div className="flex items-center gap-1.5 pt-3">
       {/* Color picker */}
       <div className="relative" ref={colorRef}>
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="gap-1.5 px-3 text-muted-foreground hover:text-primary"
+          size="sm"
+          className="gap-1 px-2.5 text-muted-foreground hover:text-primary"
           onClick={() => {
             setShowSizes(false);
             setShowColors((v) => !v);
           }}
           title="Color del texto"
         >
-          <Palette className="h-3.5 w-3.5" />
-          <span className="text-xs">Color</span>
+          <Palette className="h-3.5 w-3.5 shrink-0" />
+          <span className="text-xs whitespace-nowrap">Color</span>
         </Button>
         <AnimatePresence>
         {showColors && (
@@ -606,16 +605,16 @@ function FormatToolbar() {
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="gap-1.5 px-3 text-muted-foreground hover:text-primary"
+          size="sm"
+          className="gap-1 px-2.5 text-muted-foreground hover:text-primary"
           onClick={() => {
             setShowColors(false);
             setShowSizes((v) => !v);
           }}
           title="Tamaño del texto"
         >
-          <Type className="h-3.5 w-3.5" />
-          <span className="text-xs">Tamaño</span>
+          <Type className="h-3.5 w-3.5 shrink-0" />
+          <span className="text-xs whitespace-nowrap">Tamaño</span>
         </Button>
         <AnimatePresence>
         {showSizes && (
@@ -961,10 +960,8 @@ export default function Dashboard() {
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Sparkles className="h-4 w-4" />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img src="/assets/67385.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
             <span className="text-base font-bold tracking-tight">Asternal</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1058,11 +1055,11 @@ export default function Dashboard() {
               )}
 
               {/* Separator */}
-              <div className="mt-4 border-t border-border/40" />
+              <div className="mt-5 border-t border-border/40" />
 
               {/* Actions row */}
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-1">
+              <div className="mt-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1105,7 +1102,7 @@ export default function Dashboard() {
               </div>
 
               {/* Separator */}
-              <div className="mt-3 border-t border-border/40" />
+              <div className="mt-4 border-t border-border/40" />
 
               {/* Formatting toolbar */}
               <FormatToolbar />
@@ -1140,7 +1137,7 @@ export default function Dashboard() {
                 animate={{ opacity: 1 }}
                 className="rounded-2xl border border-dashed border-border/60 py-16 text-center"
               >
-                <Sparkles className="mx-auto h-8 w-8 text-muted-foreground/40" />
+                <img src="/assets/67385.png" alt="Asternal" className="mx-auto h-8 w-8 rounded-lg object-contain opacity-40" />
                 <p className="mt-3 text-sm text-muted-foreground">
                   No hay publicaciones todavía. ¡Sé el primero en compartir
                   algo!

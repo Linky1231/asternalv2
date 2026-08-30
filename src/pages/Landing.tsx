@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Gamepad2, Users, MessageCircle, Sparkles, ChevronRight } from "lucide-react";
+import { Gamepad2, Users, MessageCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
 
@@ -38,9 +38,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Sparkles className="h-5 w-5" />
-            </div>
+            <img src="/assets/67385.png" alt="Asternal" className="h-9 w-9 rounded-xl object-contain" />
             <span className="text-lg font-bold tracking-tight">Asternal</span>
           </div>
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
@@ -186,7 +184,7 @@ export default function Landing() {
       <footer className="border-t border-border/50 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="h-4 w-4" />
+            <img src="/assets/67385.png" alt="Asternal" className="h-4 w-4 rounded object-contain" />
             Asternal
           </div>
           <p className="text-xs text-muted-foreground/60">

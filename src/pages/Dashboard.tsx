@@ -101,7 +101,7 @@ function Lightbox({ items, initialIndex, onClose }: { items: LightboxItem[]; ini
       <div className="flex max-h-[90vh] max-w-[90vw] items-center justify-center" onClick={(e) => e.stopPropagation()}>
         {current.type === "video" ? (
           <video key={current.url} controls autoPlay playsInline className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain">
-            <source src={current.url} type={current.mime || undefined} />
+            <source src={current.url} type={current.mime || "video/mp4"} />
           </video>
         ) : (
           <img key={current.url} src={current.url} alt="Tamaño completo" className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />
@@ -138,15 +138,22 @@ function SingleMedia({ item, index, onOpenLightbox }: { item: LightboxItem; inde
   const [videoError, setVideoError] = useState(false);
   if (item.type === "video") {
     return (
-      <button type="button" onClick={() => onOpenLightbox(index)} className="group relative block w-full cursor-pointer bg-muted">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onOpenLightbox(index)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpenLightbox(index); }}
+        className="group relative block w-full cursor-pointer bg-muted outline-none"
+      >
         {!videoError ? (
           <video
             preload="metadata"
             muted
+            playsInline
             className="mx-auto block max-h-80 w-full object-contain"
             onError={() => setVideoError(true)}
           >
-            <source src={item.url} type={item.mime || undefined} />
+            <source src={item.url} type={item.mime || "video/mp4"} />
           </video>
         ) : (
           <div className="flex h-28 w-full items-center justify-center bg-muted">
@@ -156,13 +163,19 @@ function SingleMedia({ item, index, onOpenLightbox }: { item: LightboxItem; inde
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm"><Play className="ml-0.5 h-5 w-5" /></div>
         </div>
-      </button>
+      </div>
     );
   }
   return (
-    <button type="button" onClick={() => onOpenLightbox(index)} className="block w-full cursor-pointer bg-muted">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenLightbox(index)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpenLightbox(index); }}
+      className="block w-full cursor-pointer bg-muted outline-none"
+    >
       <img src={item.url} alt={`Imagen ${index + 1}`} loading="lazy" className="mx-auto block max-h-80 w-full object-contain" />
-    </button>
+    </div>
   );
 }
 
@@ -273,13 +286,13 @@ export default function Dashboard() {
       const uploaded: UploadedMedia[] = [];
       const maxRetries = 2;
       for (const pm of pendingMedia) {
-        let lastError: string = "";
+        let lastError = "";
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
             const url = await generateUploadUrl();
             const result = await fetch(url, {
               method: "POST",
-              headers: { "Content-Type": pm.file.type },
+              headers: { "Content-Type": pm.file.type || "application/octet-stream" },
               body: pm.file,
             });
             if (!result.ok) {
@@ -303,11 +316,11 @@ export default function Dashboard() {
             if (attempt < maxRetries) continue;
           }
         }
-        if (!uploaded.find((u) => u.type === pm.type && pendingMedia.indexOf(pm) === pendingMedia.indexOf(pm))) {
+        if (!uploaded.find((u) => u.type === pm.type)) {
           if (lastError) console.error(`Archivo ${pm.file.name} no se pudo subir: ${lastError}`);
         }
       }
-      await createPost({ content: content.trim(), media: uploaded.length > 0 ? uploaded : undefined });
+      await createPost({ content: content.trim(), media: uploaded.length > 0 ? (uploaded as any) : undefined });
       pendingMedia.forEach((pm) => URL.revokeObjectURL(pm.preview));
       setPendingMedia([]); setContent("");
     } catch (err) { console.error("Error al crear la publicación:", err); } finally { setUploading(false); setPosting(false); }

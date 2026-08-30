@@ -871,6 +871,7 @@ function PostCard({
   onRequestDelete,
   onOpenLightbox,
   onOpenComments,
+  postNumber,
 }: {
   post: {
     _id: string;
@@ -887,7 +888,8 @@ function PostCard({
   onToggleLike: (postId: string) => void;
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
-  onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[] }) => void;
+  onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[]; postNumber: number }) => void;
+  postNumber?: number;
 }) {
   const comments = useQuery(api.comments.list, { postId: post._id as any }) ?? [];
   const commentCount = comments.length;
@@ -965,10 +967,6 @@ function PostCard({
             </motion.span>
             <span className="tabular-nums">{post.likes > 0 ? post.likes : ""}</span>
           </motion.button>
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MessageCircle className="h-4 w-4" />
-            {commentCount > 0 && <span className="tabular-nums">{commentCount}</span>}
-          </span>
           {currentUserId === post.authorId && (
             <button
               type="button"
@@ -985,7 +983,7 @@ function PostCard({
       <div className="border-t border-border/40 px-5 py-2">
         <button
           type="button"
-          onClick={() => onOpenComments(post)}
+          onClick={() => onOpenComments({ ...post, postNumber: postNumber ?? 0 })}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
         >
           <MessageCircle className="h-4 w-4" />
@@ -1117,6 +1115,7 @@ function CommentsModal({
     createdAt: number;
     authorName: string;
     mediaUrls: LightboxItem[];
+    postNumber: number;
   };
   currentUserId?: string;
   onClose: () => void;
@@ -1187,9 +1186,9 @@ function CommentsModal({
           <X className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold">{post.title || "Publicación"}</h3>
+          <h3 className="truncate text-sm font-semibold">{post.title || `Publicación sin título de ${post.authorName}`}</h3>
           <p className="text-[10px] text-muted-foreground">
-            {commentCount} comentario{commentCount !== 1 ? "s" : ""}
+            Publicación n.º {post.postNumber} · {commentCount} comentario{commentCount !== 1 ? "s" : ""}
           </p>
         </div>
       </div>
@@ -1205,11 +1204,11 @@ function CommentsModal({
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">{post.authorName}</span>
-              <span className="text-[10px] text-muted-foreground">{formatTime(post.createdAt)}</span>
+              <span className="text-xs text-muted-foreground">{post.authorName}</span>
+              <span className="text-[10px] text-muted-foreground/60">· {formatTime(post.createdAt)}</span>
             </div>
             {post.title && (
-              <p className="mt-1.5 text-sm font-semibold text-card-foreground">{post.title}</p>
+              <p className="mt-1 text-sm font-bold text-card-foreground">{post.title}</p>
             )}
           </div>
         </div>
@@ -1321,6 +1320,7 @@ export default function Dashboard() {
     createdAt: number;
     authorName: string;
     mediaUrls: LightboxItem[];
+    postNumber: number;
   } | null>(null);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [pendingMentions, setPendingMentions] = useState<PostMention[]>([]);
@@ -1782,7 +1782,7 @@ export default function Dashboard() {
                 </p>
               </motion.div>
             ) : (
-              posts.map((post) => (
+              posts.map((post, idx) => (
                 <PostCard
                   key={post._id}
                   post={post}
@@ -1791,6 +1791,7 @@ export default function Dashboard() {
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}
                   onOpenComments={setCommentsModalPost}
+                  postNumber={posts.length - idx}
                 />
               ))
             )}

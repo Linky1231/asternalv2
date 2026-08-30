@@ -488,8 +488,6 @@ function FormatToolbar() {
   const [showSizes, setShowSizes] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const colorRef = useRef<HTMLDivElement>(null);
-  const sizeRef = useRef<HTMLDivElement>(null);
 
   const hasSelection = () => {
     const sel = window.getSelection();
@@ -502,185 +500,163 @@ function FormatToolbar() {
     hintTimer.current = setTimeout(() => setHint(null), 2500);
   };
 
-  // Close popovers on outside click
-  useEffect(() => {
-    if (!showColors && !showSizes) return;
-    const handler = (e: MouseEvent) => {
-      if (colorRef.current && !colorRef.current.contains(e.target as Node))
-        setShowColors(false);
-      if (sizeRef.current && !sizeRef.current.contains(e.target as Node))
-        setShowSizes(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showColors, showSizes]);
+
 
   return (
-    <div className="flex items-center gap-1.5 pt-3">
-      {/* Color picker */}
-      <div className="relative" ref={colorRef}>
+    <div className="pt-3">
+      {/* Toolbar buttons row */}
+      <div className="flex items-center gap-1">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="gap-1 px-2.5 text-muted-foreground hover:text-primary"
+          className={`gap-1 px-2.5 ${showColors ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
-            if (!hasSelection()) {
-              showHint("Selecciona un texto primero para cambiar el color");
-              return;
-            }
             setShowSizes(false);
-            setShowColors((v) => !v);
+            if (showColors) { setShowColors(false); return; }
+            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+            setShowColors(true);
           }}
           title="Color del texto"
         >
           <Palette className="h-3.5 w-3.5 shrink-0" />
           <span className="text-xs whitespace-nowrap">Color</span>
         </Button>
-        <AnimatePresence>
-        {showColors && (
-          <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute left-0 z-50 mt-2 w-52 rounded-xl border border-border/60 bg-card p-3 shadow-xl">
-            <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Color del texto
-            </p>
-            <div className="grid grid-cols-6 gap-1.5">
-              {TEXT_COLORS.map((c) => (
-                <button
-                  key={c.value || "default"}
-                  type="button"
-                  title={c.label}
-                  className="group relative h-7 w-7 rounded-full border border-border/60 transition-transform hover:scale-110"
-                  style={{
-                    backgroundColor: c.value || "var(--card-foreground)",
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (c.value) {
-                      applyStyleToSelection({ color: c.value });
-                    } else {
-                      // "Default" – remove inline color
-                      const sel = window.getSelection();
-                      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-                        const range = sel.getRangeAt(0);
-                        const fragment = range.extractContents();
-                        // Unwrap any nested spans' color
-                        const walk = (node: Node) => {
-                          if (node instanceof HTMLElement && node.tagName === "SPAN") {
-                            node.style.removeProperty("color");
-                            if (
-                              !node.getAttribute("style") ||
-                              node.getAttribute("style") === ""
-                            ) {
-                              const parent = node.parentNode;
-                              while (node.firstChild) {
-                                parent?.insertBefore(node.firstChild, node);
-                              }
-                              parent?.removeChild(node);
-                            } else {
-                              Array.from(node.childNodes).forEach(walk);
-                            }
-                          }
-                        };
-                        Array.from(fragment.childNodes).forEach(walk);
-                        range.insertNode(fragment);
-                        sel.removeAllRanges();
-                      }
-                    }
-                    setShowColors(false);
-                  }}
-                >
-                  <span className="absolute inset-0 rounded-full ring-2 ring-transparent ring-offset-1 ring-offset-card transition-colors group-hover:ring-primary/40" />
-                </button>
-              ))}
-            </div>
-            {/* Custom color input */}
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="color"
-                className="h-7 w-7 cursor-pointer rounded border-0 bg-transparent p-0"
-                onChange={(e) => {
-                  applyStyleToSelection({ color: e.target.value });
-                  setShowColors(false);
-                }}
-              />
-              <span className="text-[10px] text-muted-foreground">
-                Color personalizado
-              </span>
-            </div>
-          </motion.div>
-        )}
-        </AnimatePresence>
-      </div>
 
-      {/* Font size picker */}
-      <div className="relative" ref={sizeRef}>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="gap-1 px-2.5 text-muted-foreground hover:text-primary"
+          className={`gap-1 px-2.5 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
-            if (!hasSelection()) {
-              showHint("Selecciona un texto primero para cambiar el tamaño");
-              return;
-            }
             setShowColors(false);
-            setShowSizes((v) => !v);
+            if (showSizes) { setShowSizes(false); return; }
+            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+            setShowSizes(true);
           }}
           title="Tamaño del texto"
         >
           <Type className="h-3.5 w-3.5 shrink-0" />
           <span className="text-xs whitespace-nowrap">Tamaño</span>
         </Button>
+
+        {/* Bold */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="px-2.5 text-muted-foreground hover:text-primary"
+          onClick={() => {
+            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+            applyStyleToSelection({ fontWeight: "bold" });
+          }}
+          title="Negrita"
+        >
+          <span className="text-xs font-bold">B</span>
+        </Button>
+
+        {/* Hint */}
         <AnimatePresence>
-        {showSizes && (
-          <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute left-0 z-50 mt-2 rounded-xl border border-border/60 bg-card p-2 shadow-xl">
-            <p className="mb-1.5 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Tamaño del texto
-            </p>
-            <div className="flex gap-1">
-              {FONT_SIZES.map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    applyStyleToSelection({ fontSize: s.value });
-                    setShowSizes(false);
-                  }}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
+          {hint && (
+            <motion.span
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -4 }}
+              transition={{ duration: 0.15 }}
+              className="ml-1 text-xs text-muted-foreground/60 italic"
+            >
+              {hint}
+            </motion.span>
+          )}
         </AnimatePresence>
       </div>
 
-      {/* Selection hint */}
+      {/* Inline panels */}
       <AnimatePresence>
-        {hint && (
-          <motion.span
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -4 }}
-            transition={{ duration: 0.2 }}
-            className="ml-1 text-xs text-muted-foreground/70 italic"
+        {showColors && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
           >
-            {hint}
-          </motion.span>
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Color</span>
+              <div className="flex flex-wrap gap-1.5">
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c.value || "default"}
+                    type="button"
+                    title={c.label}
+                    className="h-6 w-6 rounded-full border border-border/60 transition-transform hover:scale-110"
+                    style={{ backgroundColor: c.value || "var(--card-foreground)" }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (c.value) {
+                        applyStyleToSelection({ color: c.value });
+                      } else {
+                        const sel = window.getSelection();
+                        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+                          const range = sel.getRangeAt(0);
+                          const fragment = range.extractContents();
+                          const walk = (node: Node) => {
+                            if (node instanceof HTMLElement && node.tagName === "SPAN") {
+                              node.style.removeProperty("color");
+                              if (!node.getAttribute("style") || node.getAttribute("style") === "") {
+                                const parent = node.parentNode;
+                                while (node.firstChild) parent?.insertBefore(node.firstChild, node);
+                                parent?.removeChild(node);
+                              } else { Array.from(node.childNodes).forEach(walk); }
+                            }
+                          };
+                          Array.from(fragment.childNodes).forEach(walk);
+                          range.insertNode(fragment);
+                          sel.removeAllRanges();
+                        }
+                      }
+                      setShowColors(false);
+                    }}
+                  />
+                ))}
+              </div>
+              <input
+                type="color"
+                className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
+                onChange={(e) => { applyStyleToSelection({ color: e.target.value }); setShowColors(false); }}
+              />
+              <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowColors(false)}>✕</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSizes && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tamaño</span>
+              <div className="flex gap-1">
+                {FONT_SIZES.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    className="rounded-lg px-3 py-1 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                    onMouseDown={(e) => { e.preventDefault(); applyStyleToSelection({ fontSize: s.value }); setShowSizes(false); }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowSizes(false)}>✕</button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -753,8 +729,8 @@ function PostCard({
         <div className="flex items-center gap-3">
           <motion.button
             type="button"
-            whileTap={{ scale: 0.85 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            whileTap={{ scale: 0.88 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
             onClick={() => onToggleLike(post._id)}
             className={`relative flex items-center gap-1.5 text-xs transition-colors duration-200 ${
               post.likedByMe
@@ -767,19 +743,19 @@ function PostCard({
               {post.likedByMe && (
                 <motion.span
                   key={`ring-${post._id}`}
-                  initial={{ scale: 0.6, opacity: 0.7 }}
-                  animate={{ scale: 2.2, opacity: 0 }}
-                  transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="absolute inset-0 rounded-full border-2 border-primary/40"
+                  initial={{ scale: 0.8, opacity: 0.6 }}
+                  animate={{ scale: 2, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="absolute inset-0 rounded-full border-2 border-primary/30"
                   style={{ width: 28, height: 28, margin: "auto" }}
                 />
               )}
               {/* Heart icon */}
               <motion.span
                 key={`heart-${post.likedByMe}-${post._id}`}
-                initial={post.likedByMe ? { scale: 0.5, rotate: -12 } : { scale: 1.15 }}
+                initial={post.likedByMe ? { scale: 0.6, rotate: -8 } : { scale: 1.1 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 15, mass: 0.6 }}
+                transition={{ type: "spring", stiffness: 600, damping: 14 }}
                 className="relative z-10 flex items-center justify-center"
               >
                 <Heart
@@ -794,10 +770,10 @@ function PostCard({
               {post.likes > 0 && (
                 <motion.span
                   key={post.likes}
-                  initial={{ y: -8, opacity: 0, filter: "blur(2px)" }}
-                  animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-                  exit={{ y: 8, opacity: 0, filter: "blur(2px)" }}
-                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  initial={{ y: -6, opacity: 0, scale: 0.7 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 6, opacity: 0, scale: 0.7 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                   className="tabular-nums"
                 >
                   {post.likes}

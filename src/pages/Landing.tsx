@@ -39,7 +39,7 @@ export default function Landing() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <img src="/assets/67385.png" alt="Asternal" className="h-9 w-9 rounded-xl object-contain" />
-            <span className="text-lg font-bold tracking-tight">Asternal</span>
+            <span className="text-xl font-extrabold tracking-tight text-primary">Asternal</span>
           </div>
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
             <Button size="sm" className="gap-1.5" onClick={() => navigate("/auth")}>

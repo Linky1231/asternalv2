@@ -962,7 +962,7 @@ export default function Dashboard() {
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/assets/67385.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
-            <span className="text-base font-bold tracking-tight">Asternal</span>
+            <span className="text-lg font-extrabold tracking-tight text-primary">Asternal</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden text-sm text-muted-foreground sm:inline">

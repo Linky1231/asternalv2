@@ -49,9 +49,9 @@ const TEXT_COLORS = [
 ];
 
 const HEADING_SIZES = [
-  { label: "H1", value: "32px" },
-  { label: "H2", value: "24px" },
-  { label: "H3", value: "20px" },
+  { label: "H1", value: "24px" },
+  { label: "H2", value: "20px" },
+  { label: "H3", value: "17px" },
 ];
 
 // ── Interfaces ─────────────────────────────────────────────────────
@@ -875,6 +875,7 @@ function PostCard({
   post: {
     _id: string;
     authorId: string;
+    title?: string;
     content: string;
     createdAt: number;
     likes: number;
@@ -886,7 +887,7 @@ function PostCard({
   onToggleLike: (postId: string) => void;
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
-  onOpenComments: (post: { _id: string; authorId: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[] }) => void;
+  onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[] }) => void;
 }) {
   const comments = useQuery(api.comments.list, { postId: post._id as any }) ?? [];
   const commentCount = comments.length;
@@ -913,9 +914,14 @@ function PostCard({
                 {formatTime(post.createdAt)}
               </span>
             </div>
+            {post.title && (
+              <h2 className="mt-2 text-base font-bold leading-snug text-card-foreground">
+                {post.title}
+              </h2>
+            )}
             {post.content && (
               <div
-                className="post-content mt-2 text-sm leading-relaxed text-card-foreground"
+                className="post-content mt-1 text-sm leading-relaxed text-card-foreground"
                 dangerouslySetInnerHTML={{
                   __html: sanitizePostHtml(post.content),
                 }}
@@ -1106,6 +1112,7 @@ function CommentsModal({
   post: {
     _id: string;
     authorId: string;
+    title?: string;
     content: string;
     createdAt: number;
     authorName: string;
@@ -1179,8 +1186,8 @@ function CommentsModal({
         >
           <X className="h-4 w-4" />
         </button>
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold">Comentarios</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-semibold">{post.title || "Publicación"}</h3>
           <p className="text-[10px] text-muted-foreground">
             {commentCount} comentario{commentCount !== 1 ? "s" : ""}
           </p>
@@ -1201,11 +1208,8 @@ function CommentsModal({
               <span className="text-sm font-semibold">{post.authorName}</span>
               <span className="text-[10px] text-muted-foreground">{formatTime(post.createdAt)}</span>
             </div>
-            {post.content && (
-              <div
-                className="post-content mt-1.5 text-sm leading-relaxed text-card-foreground"
-                dangerouslySetInnerHTML={{ __html: sanitizePostHtml(post.content) }}
-              />
+            {post.title && (
+              <p className="mt-1.5 text-sm font-semibold text-card-foreground">{post.title}</p>
             )}
           </div>
         </div>
@@ -1298,6 +1302,7 @@ export default function Dashboard() {
   const deletePost = useMutation(api.posts.remove);
 
   const [content, setContent] = useState("");
+  const [postTitle, setPostTitle] = useState("");
   const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
@@ -1311,6 +1316,7 @@ export default function Dashboard() {
   const [commentsModalPost, setCommentsModalPost] = useState<{
     _id: string;
     authorId: string;
+    title?: string;
     content: string;
     createdAt: number;
     authorName: string;
@@ -1470,7 +1476,7 @@ export default function Dashboard() {
     // Get the latest HTML from the editor
     const html = editorRef.current?.innerHTML ?? content;
     const textOnly = editorRef.current?.textContent?.trim() ?? "";
-    if ((!textOnly && pendingMedia.length === 0) || posting) return;
+    if ((!textOnly && !postTitle.trim() && pendingMedia.length === 0) || posting) return;
 
     setPosting(true);
     setUploading(true);
@@ -1524,6 +1530,7 @@ export default function Dashboard() {
       // Send HTML content (or empty string if no text)
       const contentToSend = textOnly ? html.trim() : "";
       await createPost({
+        title: postTitle.trim() || undefined,
         content: contentToSend,
         media:
           uploaded.length > 0 ? (uploaded as any) : undefined,
@@ -1535,6 +1542,7 @@ export default function Dashboard() {
       setPendingMedia([]);
       setPendingMentions([]);
       setContent("");
+      setPostTitle("");
       if (editorRef.current) editorRef.current.innerHTML = "";
     } catch (err) {
       console.error("Error al crear la publicación:", err);
@@ -1569,7 +1577,7 @@ export default function Dashboard() {
 
   const hasText =
     editorRef.current?.textContent?.trim().length ?? content.trim().length > 0;
-  const isPostable = hasText || pendingMedia.length > 0;
+  const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -1618,6 +1626,16 @@ export default function Dashboard() {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
+              {/* Title input */}
+              <input
+                type="text"
+                value={postTitle}
+                onChange={(e) => setPostTitle(e.target.value)}
+                placeholder="Título (opcional)"
+                maxLength={120}
+                className="w-full bg-transparent text-base font-bold text-card-foreground outline-none placeholder:text-muted-foreground/50"
+              />
+              <div className="my-2 border-t border-border/30" />
               {/* Rich text editor */}
               <div
                 ref={editorRef}

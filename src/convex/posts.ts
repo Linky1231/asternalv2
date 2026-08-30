@@ -46,6 +46,7 @@ export const list = query({
           mediaUrls,
           likedByMe,
           mentions: post.mentions ?? [],
+          title: post.title ?? undefined,
         };
       }),
     );
@@ -65,6 +66,7 @@ export const generateUploadUrl = mutation({
 
 export const create = mutation({
   args: {
+    title: v.optional(v.string()),
     content: v.string(),
     media: v.optional(
       v.array(
@@ -100,6 +102,7 @@ export const create = mutation({
 
     await ctx.db.insert("posts", {
       authorId: userId,
+      title: args.title?.trim() || undefined,
       content: args.content.trim(),
       createdAt: Date.now(),
       likes: 0,

@@ -30,6 +30,7 @@ const schema = defineSchema(
 
     posts: defineTable({
       authorId: v.id("users"),
+      title: v.optional(v.string()),
       content: v.string(),
       createdAt: v.number(),
       likes: v.number(),

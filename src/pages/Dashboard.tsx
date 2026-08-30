@@ -1079,18 +1079,12 @@ function PostCard({
             </motion.span>
             <span className="tabular-nums">{post.likes > 0 ? post.likes : ""}</span>
           </motion.button>
-          {/* Favorites */}
+          {/* Favorites (visual placeholder) */}
           <button
             type="button"
-            onClick={() => onToggleFavorite(post._id)}
-            className={`flex items-center gap-1 text-xs transition-colors ${
-              post.favoritedByMe
-                ? "text-yellow-500"
-                : "text-muted-foreground hover:text-yellow-500"
-            }`}
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-yellow-500"
           >
-            <Star className={`h-4 w-4 transition-all duration-150 ${post.favoritedByMe ? "fill-yellow-500" : "fill-transparent"}`} />
-            {post.favorites > 0 && <span className="tabular-nums">{post.favorites}</span>}
+            <Star className="h-4 w-4" />
           </button>
           {/* Share */}
           <button

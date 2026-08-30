@@ -317,40 +317,53 @@ function DeleteConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50">
-      <div
-        className="mx-4 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">Eliminar publicación</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              ¿Estás seguro de que quieres eliminar esta publicación? Esta
-              acción no se puede deshacer.
-            </p>
-          </div>
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onConfirm}
-            className="gap-1.5"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 8 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="mx-4 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2 className="h-3.5 w-3.5" /> Eliminar
-          </Button>
-        </div>
-      </div>
-    </div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">Eliminar publicación</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  ¿Estás seguro de que quieres eliminar esta publicación? Esta
+                  acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={onCancel}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onConfirm}
+                className="gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -507,8 +520,14 @@ function FormatToolbar() {
         >
           <Palette className="h-4 w-4" />
         </Button>
+        <AnimatePresence>
         {showColors && (
-          <div className="absolute bottom-full left-0 z-50 mb-2 w-52 rounded-xl border border-border/60 bg-card p-3 shadow-xl">
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="absolute bottom-full left-0 z-50 mb-2 w-52 rounded-xl border border-border/60 bg-card p-3 shadow-xl">
             <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Color del texto
             </p>
@@ -576,8 +595,9 @@ function FormatToolbar() {
                 Color personalizado
               </span>
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
 
       {/* Font size picker */}
@@ -595,8 +615,14 @@ function FormatToolbar() {
         >
           <Type className="h-4 w-4" />
         </Button>
+        <AnimatePresence>
         {showSizes && (
-          <div className="absolute bottom-full left-0 z-50 mb-2 rounded-xl border border-border/60 bg-card p-2 shadow-xl">
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="absolute bottom-full left-0 z-50 mb-2 rounded-xl border border-border/60 bg-card p-2 shadow-xl">
             <p className="mb-1.5 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Tamaño del texto
             </p>
@@ -616,8 +642,9 @@ function FormatToolbar() {
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -687,8 +714,10 @@ function PostCard({
       )}
       <div className="px-5 pb-4 pt-3">
         <div className="flex items-center gap-3">
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 1.3 }}
+            transition={{ type: "spring", stiffness: 500, damping: 15 }}
             onClick={() => onToggleLike(post._id)}
             className={`flex items-center gap-1.5 text-xs transition-colors ${
               post.likedByMe
@@ -696,11 +725,16 @@ function PostCard({
                 : "text-muted-foreground hover:text-primary"
             }`}
           >
-            <Heart
-              className={`h-3.5 w-3.5 ${post.likedByMe ? "fill-primary" : ""}`}
-            />
+            <motion.div
+              animate={post.likedByMe ? { scale: [1, 1.25, 1] } : { scale: 1 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            >
+              <Heart
+                className={`h-3.5 w-3.5 ${post.likedByMe ? "fill-primary" : ""}`}
+              />
+            </motion.div>
             {post.likes > 0 && <span>{post.likes}</span>}
-          </button>
+          </motion.button>
           {currentUserId === post.authorId && (
             <button
               type="button"
@@ -919,7 +953,11 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Nav ──────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <motion.nav
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -942,12 +980,15 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 py-8">
         {/* Composer */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
           className="rounded-2xl border border-border/60 bg-card p-4"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
@@ -1062,7 +1103,7 @@ export default function Dashboard() {
               <FormatToolbar />
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Feed */}
         <div className="mt-6 flex flex-col gap-4">

@@ -141,3 +141,25 @@
 .post-content span {
   word-break: break-word;
 }
+
+/* Smooth transitions globally */
+html {
+  scroll-behavior: smooth;
+}
+
+*,
+*::before,
+*::after {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Exclude elements that manage their own timing */
+.animate-spin,
+.animate-pulse,
+.animate-spin-slow,
+[data-framer-motion] * {
+  transition-duration: unset;
+  transition-property: unset;
+}

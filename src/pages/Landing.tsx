@@ -43,9 +43,11 @@ export default function Landing() {
             </div>
             <span className="text-lg font-bold tracking-tight">Asternal</span>
           </div>
-          <Button size="sm" className="gap-1.5" onClick={() => navigate("/auth")}>
-            Comenzar <ChevronRight className="h-4 w-4" />
-          </Button>
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
+            <Button size="sm" className="gap-1.5" onClick={() => navigate("/auth")}>
+              Comenzar <ChevronRight className="h-4 w-4" />
+            </Button>
+          </motion.div>
         </div>
       </nav>
 
@@ -88,18 +90,22 @@ export default function Landing() {
             variants={fadeUp}
             custom={3}
           >
-            <Button size="lg" className="gap-2 px-8" onClick={() => navigate("/auth")}>
-              Únete a la comunidad
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="gap-2 px-8"
-              onClick={() => navigate("/auth?returnTo=/dashboard")}
-            >
-              Iniciar sesión
-            </Button>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
+              <Button size="lg" className="gap-2 px-8" onClick={() => navigate("/auth")}>
+                Únete a la comunidad
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 px-8"
+                onClick={() => navigate("/auth?returnTo=/dashboard")}
+              >
+                Iniciar sesión
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -126,6 +132,8 @@ export default function Landing() {
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
+                whileHover={{ y: -4, scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="group rounded-2xl border border-border/60 bg-card p-8 transition-colors hover:border-primary/30 hover:bg-accent/50"
                 initial="hidden"
                 whileInView="visible"
@@ -161,14 +169,16 @@ export default function Landing() {
             <p className="mt-4 text-muted-foreground">
               Únete a Asternal y sé parte de algo más grande.
             </p>
-            <Button
-              size="lg"
-              className="mt-8 gap-2 px-10"
-              onClick={() => navigate("/auth")}
-            >
-              Comenzar gratis
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} className="inline-block">
+              <Button
+                size="lg"
+                className="gap-2 px-10"
+                onClick={() => navigate("/auth")}
+              >
+                Comenzar gratis
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </section>

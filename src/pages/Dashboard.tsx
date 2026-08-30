@@ -516,7 +516,7 @@ function FormatToolbar() {
   }, [showColors, showSizes]);
 
   return (
-    <div className="relative flex items-center gap-1.5 pt-3">
+    <div className="flex items-center gap-1.5 pt-3">
       {/* Color picker */}
       <div className="relative" ref={colorRef}>
         <Button
@@ -544,7 +544,7 @@ function FormatToolbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute bottom-full left-0 z-50 mb-2 w-52 rounded-xl border border-border/60 bg-card p-3 shadow-xl">
+            className="absolute left-0 z-50 mt-2 w-52 rounded-xl border border-border/60 bg-card p-3 shadow-xl">
             <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Color del texto
             </p>
@@ -644,7 +644,7 @@ function FormatToolbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute bottom-full left-0 z-50 mb-2 rounded-xl border border-border/60 bg-card p-2 shadow-xl">
+            className="absolute left-0 z-50 mt-2 rounded-xl border border-border/60 bg-card p-2 shadow-xl">
             <p className="mb-1.5 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Tamaño del texto
             </p>
@@ -672,15 +672,15 @@ function FormatToolbar() {
       {/* Selection hint */}
       <AnimatePresence>
         {hint && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
+          <motion.span
+            initial={{ opacity: 0, x: -4 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -4 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-full left-0 z-50 mb-2 whitespace-nowrap rounded-lg border border-border/60 bg-muted px-3 py-1.5 text-xs text-muted-foreground shadow-lg"
+            className="ml-1 text-xs text-muted-foreground/70 italic"
           >
             {hint}
-          </motion.div>
+          </motion.span>
         )}
       </AnimatePresence>
     </div>

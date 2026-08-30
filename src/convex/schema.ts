@@ -35,6 +35,7 @@ const schema = defineSchema(
       createdAt: v.number(),
       likes: v.number(),
       favorites: v.number(),
+      shares: v.number(),
       media: v.optional(
         v.array(
           v.object({
@@ -85,6 +86,14 @@ const schema = defineSchema(
     })
       .index("by_comment", ["commentId"])
       .index("by_user_comment", ["userId", "commentId"]),
+
+    follows: defineTable({
+      followerId: v.id("users"),
+      followingId: v.id("users"),
+    })
+      .index("by_follower", ["followerId"])
+      .index("by_following", ["followingId"])
+      .index("by_pair", ["followerId", "followingId"]),
   },
   {
     schemaValidation: false,

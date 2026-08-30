@@ -1032,6 +1032,8 @@ function PostCard({
   post,
   currentUserId,
   onToggleLike,
+  onToggleFavorite,
+  onToggleFollow,
   onRequestDelete,
   onOpenLightbox,
   onOpenComments,
@@ -1053,6 +1055,7 @@ function PostCard({
   currentUserId?: string;
   onToggleLike: (postId: string) => void;
   onToggleFavorite: (postId: string) => void;
+  onToggleFollow: (userId: string) => void;
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
   onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[]; postNumber: number }) => void;
@@ -1060,6 +1063,12 @@ function PostCard({
 }) {
   const comments = useQuery(api.comments.list, { postId: post._id as any }) ?? [];
   const commentCount = comments.length;
+  const isFollowingUser = useQuery(
+    api.follows.isFollowing,
+    post.authorId && currentUserId && post.authorId !== currentUserId
+      ? { userId: post.authorId as any }
+      : "skip",
+  );
 
   return (
     <motion.div
@@ -1082,6 +1091,20 @@ function PostCard({
               <span className="text-xs text-muted-foreground">
                 {formatTime(post.createdAt)}
               </span>
+              {currentUserId && post.authorId !== currentUserId && (
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => onToggleFollow(post.authorId)}
+                  className={`ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors ${
+                    isFollowingUser
+                      ? "bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      : "bg-primary/10 text-primary hover:bg-primary/20"
+                  }`}
+                >
+                  {isFollowingUser ? "Siguiendo" : "Seguir"}
+                </motion.button>
+              )}
             </div>
             {post.title && (
               <h2 className="mt-2 text-base font-bold leading-snug text-card-foreground">
@@ -1134,15 +1157,27 @@ function PostCard({
             </motion.span>
             <span className="tabular-nums">{post.likes > 0 ? post.likes : ""}</span>
           </motion.button>
-          {/* Favorites (visual placeholder) */}
+          {/* Favorites */}
           <motion.button
             type="button"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.85 }}
             transition={{ type: "spring", stiffness: 600, damping: 15 }}
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-yellow-500"
+            onClick={() => onToggleFavorite(post._id)}
+            className={`flex items-center gap-1 text-xs transition-colors ${
+              post.favoritedByMe
+                ? "text-yellow-500"
+                : "text-muted-foreground hover:text-yellow-500"
+            }`}
           >
-            <Star className="h-4 w-4" />
+            <motion.span
+              key={`${post.favoritedByMe}-${post._id}-fav`}
+              animate={post.favoritedByMe ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <Star className={`h-4 w-4 transition-colors duration-150 ${post.favoritedByMe ? "fill-yellow-500" : "fill-transparent"}`} />
+            </motion.span>
+            {post.favorites > 0 && <span className="tabular-nums">{post.favorites}</span>}
           </motion.button>
           {/* Share */}
           <motion.button
@@ -1495,17 +1530,25 @@ function CommentsModal({
   );
 }
 
+const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
+  { id: "forYou", label: "Para ti" },
+  { id: "following", label: "Seguidos" },
+  { id: "popular", label: "Populares" },
+];
+
 // ═══════════════════════════════════════════════════════════════════
 // Dashboard
 // ═══════════════════════════════════════════════════════════════════
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const posts = useQuery(api.posts.list);
+  const [activeTab, setActiveTab] = useState<"forYou" | "following" | "popular">("forYou");
+  const posts = useQuery(api.posts.list, { sortBy: activeTab });
   const createPost = useMutation(api.posts.create);
   const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
   const toggleLikeMutation = useMutation(api.posts.toggleLike);
   const toggleFavoriteMutation = useMutation(api.posts.toggleFavorite);
+  const toggleFollowMutation = useMutation(api.follows.toggleFollow);
   const deletePost = useMutation(api.posts.remove);
 
   const [content, setContent] = useState("");
@@ -1824,6 +1867,33 @@ export default function Dashboard() {
         </div>
       </motion.nav>
 
+      {/* ── Tabs ─────────────────────────────────────────────── */}
+      <div className="sticky top-14 z-40 border-b border-border/40 bg-background/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-2xl">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex-1 py-3 text-center text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
         {/* Composer */}
@@ -2007,6 +2077,7 @@ export default function Dashboard() {
                   currentUserId={user?._id}
                   onToggleLike={handleToggleLike}
                   onToggleFavorite={handleToggleFavorite}
+                  onToggleFollow={(userId) => toggleFollowMutation({ userId: userId as any })}
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}
                   onOpenComments={setCommentsModalPost}

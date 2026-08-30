@@ -3,23 +3,101 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    sortBy: v.optional(
+      v.union(
+        v.literal("forYou"),
+        v.literal("following"),
+        v.literal("popular"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
+    const sortBy = args.sortBy ?? "forYou";
 
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_created")
-      .order("desc")
-      .take(50);
+    let posts;
+
+    if (sortBy === "following" && userId) {
+      // Get IDs of users the current user follows
+      const followRecords = await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q) => q.eq("followerId", userId))
+        .collect();
+      const followedIds = followRecords.map((f) => f.followingId);
+
+      if (followedIds.length === 0) {
+        return [];
+      }
+
+      // Fetch posts from followed users, sorted by recency
+      const allPosts = [] as any[];
+      for (const authorId of followedIds) {
+        const authorPosts = await ctx.db
+          .query("posts")
+          .withIndex("by_created")
+          .order("desc")
+          .collect();
+        for (const p of authorPosts) {
+          if (p.authorId === authorId) allPosts.push(p);
+        }
+      }
+      allPosts.sort((a, b) => b.createdAt - a.createdAt);
+      posts = allPosts.slice(0, 50);
+    } else if (sortBy === "popular") {
+      // Fetch all recent posts and score them
+      const allPosts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(200);
+
+      // Score and sort by popularity
+      const scored = allPosts.map((p) => ({
+        ...p,
+        score: p.likes * 2 + (p.shares ?? 0) * 4 + (p.favorites ?? 0) * 3,
+      }));
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return b.createdAt - a.createdAt;
+      });
+      posts = scored.slice(0, 50);
+    } else {
+      // "forYou" — score-based with recency boost, slight randomization
+      const allPosts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(200);
+
+      const now = Date.now();
+      const scored = allPosts.map((p) => {
+        const baseScore =
+          p.likes * 2 + (p.shares ?? 0) * 4 + (p.favorites ?? 0) * 3;
+        // Recency boost: posts < 24h old get a multiplier
+        const ageHours = (now - p.createdAt) / (1000 * 60 * 60);
+        const recencyBoost = ageHours < 24 ? 1.5 : ageHours < 72 ? 1.2 : 1.0;
+        // Small random factor for variety
+        const jitter = 0.8 + Math.random() * 0.4;
+        return {
+          ...p,
+          score: baseScore * recencyBoost * jitter,
+        };
+      });
+      scored.sort((a, b) => b.score - a.score);
+      posts = scored.slice(0, 50);
+    }
 
     const postsWithAuthors = await Promise.all(
       posts.map(async (post) => {
-        const author = await ctx.db.get(post.authorId);
+        const author = await ctx.db.get(post.authorId) as {
+          name?: string;
+          image?: string;
+        } | null;
 
         const mediaUrls = post.media
           ? await Promise.all(
-              post.media.map(async (m) => ({
+              post.media.map(async (m: { storageId: string; type: "image" | "video"; mime?: string }) => ({
                 url: (await ctx.storage.getUrl(m.storageId)) ?? "",
                 type: m.type,
                 mime: m.mime ?? undefined,
@@ -120,6 +198,7 @@ export const create = mutation({
       createdAt: Date.now(),
       likes: 0,
       favorites: 0,
+      shares: 0,
       media: args.media && args.media.length > 0 ? args.media : undefined,
       mentions: args.mentions && args.mentions.length > 0 ? args.mentions : undefined,
     });

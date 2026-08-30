@@ -570,21 +570,22 @@ function FormatToolbar() {
           <span className="text-sm font-medium underline leading-none">S</span>
         </Button>
 
-        {/* Hint */}
-        <AnimatePresence>
-          {hint && (
-            <motion.span
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -4 }}
-              transition={{ duration: 0.15 }}
-              className="ml-1 text-xs text-muted-foreground/60 italic"
-            >
-              {hint}
-            </motion.span>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Hint below toolbar */}
+      <AnimatePresence>
+        {hint && (
+          <motion.p
+            initial={{ opacity: 0, y: -2 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -2 }}
+            transition={{ duration: 0.15 }}
+            className="mt-1 text-[11px] text-muted-foreground/60 italic"
+          >
+            {hint}
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* Inline panels */}
       <AnimatePresence>
@@ -744,8 +745,8 @@ function PostCard({
         <div className="flex items-center gap-3">
           <motion.button
             type="button"
-            whileTap={{ scale: 0.88 }}
-            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 700, damping: 25 }}
             onClick={() => onToggleLike(post._id)}
             className={`relative flex items-center gap-1.5 text-xs transition-colors duration-200 ${
               post.likedByMe
@@ -756,9 +757,9 @@ function PostCard({
             {/* Heart icon with fill animation */}
             <motion.span
               key={`heart-${post.likedByMe}-${post._id}`}
-              initial={post.likedByMe ? { scale: 0.5 } : { scale: 1.08 }}
+              initial={post.likedByMe ? { scale: 0.4 } : { scale: 1.06 }}
               animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 900, damping: 10, mass: 0.4 }}
+              transition={{ type: "spring", stiffness: 1200, damping: 10, mass: 0.3 }}
               className="flex items-center justify-center"
             >
               <Heart

@@ -51,14 +51,8 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-16">
-        {/* Subtle gradient background */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-1/4 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[120px]" />
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-        </div>
-
-        <div className="relative mx-auto max-w-4xl px-6 text-center">
+      <section className="relative flex min-h-screen items-center justify-center pt-16">
+        <div className="mx-auto max-w-4xl px-6 text-center">
           <motion.div
             initial="hidden"
             animate="visible"
@@ -79,9 +73,7 @@ export default function Landing() {
             custom={1}
           >
             Your Gaming{" "}
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Community
-            </span>{" "}
+            <span className="text-primary">Community</span>{" "}
             Awaits
           </motion.h1>
 

@@ -20,8 +20,8 @@ import {
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 
-const ACCEPTED_IMAGE = "image/jpeg,image/png,image/gif,image/webp";
-const ACCEPTED_VIDEO = "video/mp4,video/webm,video/quicktime";
+const ACCEPTED_IMAGE = "image/jpeg,image/png,image/gif,image/webp,image/bmp,image/svg+xml";
+const ACCEPTED_VIDEO = "video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska,video/x-flv,video/3gpp,video/mpeg,video/ogg,video/*";
 const ACCEPTED_ALL = `${ACCEPTED_IMAGE},${ACCEPTED_VIDEO}`;
 const MAX_FILES = 10;
 const MAX_IMAGE_MB = 10;
@@ -99,7 +99,7 @@ function Lightbox({ items, initialIndex, onClose }: { items: LightboxItem[]; ini
       )}
       <div className="flex max-h-[90vh] max-w-[90vw] items-center justify-center" onClick={(e) => e.stopPropagation()}>
         {current.type === "video" ? (
-          <video key={current.url} src={current.url} controls autoPlay className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />
+          <video key={current.url} src={current.url} controls autoPlay playsInline className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />
         ) : (
           <img key={current.url} src={current.url} alt="Tamaño completo" className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain" />
         )}
@@ -132,10 +132,23 @@ function DeleteConfirmDialog({ open, onConfirm, onCancel }: { open: boolean; onC
 }
 
 function SingleMedia({ item, index, onOpenLightbox }: { item: LightboxItem; index: number; onOpenLightbox: (i: number) => void }) {
+  const [videoError, setVideoError] = useState(false);
   if (item.type === "video") {
     return (
       <button type="button" onClick={() => onOpenLightbox(index)} className="group relative block w-full cursor-pointer bg-muted">
-        <video src={item.url} preload="metadata" muted className="mx-auto block max-h-80 w-full object-contain" />
+        {!videoError ? (
+          <video
+            src={item.url}
+            preload="metadata"
+            muted
+            className="mx-auto block max-h-80 w-full object-contain"
+            onError={() => setVideoError(true)}
+          />
+        ) : (
+          <div className="flex h-28 w-full items-center justify-center bg-muted">
+            <Film className="h-8 w-8 text-muted-foreground/40" />
+          </div>
+        )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm"><Play className="ml-0.5 h-5 w-5" /></div>
         </div>
@@ -254,12 +267,41 @@ export default function Dashboard() {
     setPosting(true); setUploading(true);
     try {
       const uploaded: UploadedMedia[] = [];
+      const maxRetries = 2;
       for (const pm of pendingMedia) {
-        const url = await generateUploadUrl();
-        const result = await fetch(url, { method: "POST", headers: { "Content-Type": pm.file.type }, body: pm.file });
-        if (!result.ok) { console.error("Error al subir " + pm.file.name); continue; }
-        const json = await result.json();
-        if (json.storageId) uploaded.push({ storageId: json.storageId, type: pm.type });
+        let lastError: string = "";
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            const url = await generateUploadUrl();
+            const result = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": pm.file.type },
+              body: pm.file,
+            });
+            if (!result.ok) {
+              lastError = `HTTP ${result.status}`;
+              console.error(`Error al subir ${pm.file.name} (intento ${attempt + 1}): ${lastError}`);
+              if (attempt < maxRetries) continue;
+              break;
+            }
+            const json = await result.json();
+            if (json.storageId) {
+              uploaded.push({ storageId: json.storageId, type: pm.type });
+              break;
+            } else {
+              lastError = "Respuesta sin storageId";
+              console.error(`Error al subir ${pm.file.name}: respuesta sin storageId`, json);
+              if (attempt < maxRetries) continue;
+            }
+          } catch (fetchErr) {
+            lastError = fetchErr instanceof Error ? fetchErr.message : "Error de red";
+            console.error(`Error de red al subir ${pm.file.name} (intento ${attempt + 1}):`, lastError);
+            if (attempt < maxRetries) continue;
+          }
+        }
+        if (!uploaded.find((u) => u.type === pm.type && pendingMedia.indexOf(pm) === pendingMedia.indexOf(pm))) {
+          if (lastError) console.error(`Archivo ${pm.file.name} no se pudo subir: ${lastError}`);
+        }
       }
       await createPost({ content: content.trim(), media: uploaded.length > 0 ? uploaded : undefined });
       pendingMedia.forEach((pm) => URL.revokeObjectURL(pm.preview));

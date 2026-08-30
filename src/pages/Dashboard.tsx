@@ -791,6 +791,7 @@ function PostCard({
   onToggleLike,
   onRequestDelete,
   onOpenLightbox,
+  onOpenComments,
 }: {
   post: {
     _id: string;
@@ -806,25 +807,10 @@ function PostCard({
   onToggleLike: (postId: string) => void;
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
+  onOpenComments: (post: { _id: string; authorId: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[] }) => void;
 }) {
   const comments = useQuery(api.comments.list, { postId: post._id as any }) ?? [];
-  const createComment = useMutation(api.comments.create);
-  const [commentText, setCommentText] = useState("");
-  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
-
-  const topLevelComments = comments.filter((c) => !c.parentCommentId);
   const commentCount = comments.length;
-
-  const handleComment = async () => {
-    if (!commentText.trim()) return;
-    await createComment({
-      postId: post._id as any,
-      content: commentText.trim(),
-      parentCommentId: replyTo?.id as any,
-    });
-    setCommentText("");
-    setReplyTo(null);
-  };
 
   return (
     <motion.div
@@ -911,45 +897,145 @@ function PostCard({
         </div>
       </div>
 
-      {/* Comments section */}
-      <div className="border-t border-border/40 px-5 pt-3 pb-4">
-        {/* Comment input */}
-        <div className="flex items-start gap-2.5">
-          <Avatar className="h-7 w-7 shrink-0">
-            <AvatarFallback className="bg-muted text-[10px] font-semibold">
-              {currentUserId ? "Tú" : "?"}
+      {/* Comments button */}
+      <div className="border-t border-border/40 px-5 py-2">
+        <button
+          type="button"
+          onClick={() => onOpenComments(post)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {commentCount > 0 ? `Ver ${commentCount} comentario${commentCount > 1 ? "s" : ""}` : "Escribe un comentario…"}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Comments Modal ─────────────────────────────────────────────
+function CommentsModal({
+  post,
+  currentUserId,
+  onClose,
+}: {
+  post: {
+    _id: string;
+    authorId: string;
+    content: string;
+    createdAt: number;
+    authorName: string;
+    mediaUrls: LightboxItem[];
+  };
+  currentUserId?: string;
+  onClose: () => void;
+}) {
+  const pid = post._id as any;
+  const comments = useQuery(api.comments.list, { postId: pid }) ?? [];
+  const createComment = useMutation(api.comments.create);
+  const [commentText, setCommentText] = useState("");
+  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+  const [sending, setSending] = useState(false);
+
+  const topLevelComments = comments.filter((c) => !c.parentCommentId);
+  const commentCount = comments.length;
+
+  // Lock body scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleComment = async () => {
+    if (!commentText.trim() || sending) return;
+    setSending(true);
+    try {
+      await createComment({
+        postId: pid,
+        content: commentText.trim(),
+        parentCommentId: replyTo?.id as any,
+      });
+      setCommentText("");
+      setReplyTo(null);
+      requestAnimationFrame(() => {
+        commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
+    } catch (err) {
+      console.error("Error al comentar:", err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      className="fixed inset-0 z-[95] flex flex-col bg-background"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-border/50 bg-background/80 px-4 py-3 backdrop-blur-xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold">Comentarios</h3>
+          <p className="text-[10px] text-muted-foreground">
+            {commentCount} comentario{commentCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Post preview */}
+      <div className="border-b border-border/40 bg-card/50 px-5 py-4">
+        <div className="flex items-start gap-3">
+          <Avatar className="h-9 w-9 shrink-0 border border-border/50">
+            <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
+              {getInitials(post.authorName)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            {replyTo && (
-              <div className="mb-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                <Reply className="h-3 w-3" />
-                Respondiendo a <span className="font-medium text-foreground">{replyTo.name}</span>
-                <button type="button" onClick={() => setReplyTo(null)} className="ml-auto text-muted-foreground hover:text-foreground">✕</button>
-              </div>
-            )}
             <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(); } }}
-                placeholder={replyTo ? "Escribe una respuesta…" : "Escribe un comentario…"}
-                className="min-h-[32px] flex-1 bg-transparent text-xs text-card-foreground outline-none placeholder:text-muted-foreground"
-                maxLength={1000}
-              />
-              {commentText.trim() && (
-                <Button type="button" size="icon" className="h-7 w-7" onClick={handleComment}>
-                  <Send className="h-3 w-3" />
-                </Button>
-              )}
+              <span className="text-sm font-semibold">{post.authorName}</span>
+              <span className="text-[10px] text-muted-foreground">{formatTime(post.createdAt)}</span>
             </div>
+            {post.content && (
+              <div
+                className="post-content mt-1.5 text-sm leading-relaxed text-card-foreground"
+                dangerouslySetInnerHTML={{ __html: sanitizePostHtml(post.content) }}
+              />
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Comments list */}
-        {topLevelComments.length > 0 && (
-          <div className="mt-3 divide-y divide-border/30">
+      {/* Comments list */}
+      <div className="flex-1 overflow-y-auto px-5 py-3">
+        {topLevelComments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <MessageCircle className="h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-3 text-xs text-muted-foreground">
+              No hay comentarios todavía. ¡Sé el primero!
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/30">
             {topLevelComments.map((comment) => (
               <CommentItem
                 key={comment._id}
@@ -959,8 +1045,52 @@ function PostCard({
                 postId={post._id}
               />
             ))}
+            <div ref={commentsEndRef} />
           </div>
         )}
+      </div>
+
+      {/* Comment input (fixed at bottom) */}
+      <div className="border-t border-border/50 bg-background/80 px-5 py-3 backdrop-blur-xl">
+        {replyTo && (
+          <div className="mb-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <Reply className="h-3 w-3" />
+            Respondiendo a <span className="font-medium text-foreground">{replyTo.name}</span>
+            <button type="button" onClick={() => setReplyTo(null)} className="ml-auto text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarFallback className="bg-muted text-[10px] font-semibold">
+              {currentUserId ? "Tú" : "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <input
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(); } }}
+              placeholder={replyTo ? "Escribe una respuesta…" : "Escribe un comentario…"}
+              className="min-h-[36px] w-full rounded-xl border border-border/50 bg-muted/50 px-3 py-2 text-xs text-card-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+              maxLength={1000}
+              autoFocus
+            />
+          </div>
+          <Button
+            type="button"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={handleComment}
+            disabled={!commentText.trim() || sending}
+          >
+            {sending ? (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
@@ -989,6 +1119,14 @@ export default function Dashboard() {
     index: number;
   } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [commentsModalPost, setCommentsModalPost] = useState<{
+    _id: string;
+    authorId: string;
+    content: string;
+    createdAt: number;
+    authorName: string;
+    mediaUrls: LightboxItem[];
+  } | null>(null);
 
   // ── File handling ──────────────────────────────────────────────
   const addFiles = useCallback(
@@ -1367,6 +1505,7 @@ export default function Dashboard() {
                   onToggleLike={handleToggleLike}
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}
+                  onOpenComments={setCommentsModalPost}
                 />
               ))
             )}
@@ -1381,6 +1520,17 @@ export default function Dashboard() {
             items={lightbox.items}
             initialIndex={lightbox.index}
             onClose={() => setLightbox(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Comments modal */}
+      <AnimatePresence>
+        {commentsModalPost && (
+          <CommentsModal
+            post={commentsModalPost}
+            currentUserId={user?._id}
+            onClose={() => setCommentsModalPost(null)}
           />
         )}
       </AnimatePresence>

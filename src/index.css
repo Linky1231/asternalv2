@@ -142,6 +142,12 @@
   word-break: break-word;
 }
 
+/* Keep text color visible when selected */
+::selection {
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+  color: inherit;
+}
+
 .post-content span.mention {
   color: var(--primary);
   font-weight: 600;

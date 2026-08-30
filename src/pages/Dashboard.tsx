@@ -187,70 +187,98 @@ function useVideoObjectUrl(url: string, mime: string) {
 }
 
 // ── Selection formatting helper ────────────────────────────────────
-/** Walk up from a node to find the closest ancestor (or self) that is a styled span. */
-function findStyledAncestor(node: Node, prop: string): HTMLElement | null {
-  let current: Node | null = node;
-  while (current && current !== document.body) {
-    if (
-      current instanceof HTMLElement &&
-      current.tagName === "SPAN" &&
-      (current.style as any)[prop]
-    ) {
-      return current;
-    }
-    current = current.parentNode;
-  }
-  return null;
-}
-
-/** Check if the selection has a given inline style by walking DOM ancestors. */
-function selectionHasStyle(prop: string, value: string): boolean {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
-  const range = sel.getRangeAt(0);
-  // Check the anchor node (where selection starts)
-  const anchor = findStyledAncestor(range.startContainer, prop);
-  if (!anchor) return false;
-  const v = (anchor.style as any)[prop];
-  if (prop === "fontWeight") return v === "bold" || parseInt(v) >= 700;
-  if (prop === "textDecoration") return v.includes("underline");
-  return v === value;
-}
-
-/** Remove a specific inline style from the selection, unwrapping empty spans. */
-function removeStyleFromSelection(prop: string) {
+/**
+ * Toggle an inline style on the current selection.
+ * If the selection already has the style, remove it.
+ * If not, apply it.
+ * Works in a single DOM pass to avoid selection issues.
+ */
+function toggleStyleOnSelection(prop: string, value: string) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
   const range = sel.getRangeAt(0);
   const fragment = range.extractContents();
-  const walk = (node: Node) => {
-    if (node instanceof HTMLElement && node.tagName === "SPAN") {
-      (node.style as any).removeProperty(prop);
-      if (!node.getAttribute("style") || node.getAttribute("style") === "") {
-        const parent = node.parentNode;
-        while (node.firstChild) parent?.insertBefore(node.firstChild, node);
-        parent?.removeChild(node);
-      } else {
-        Array.from(node.childNodes).forEach(walk);
+
+  // If value is empty, always remove (used by "Predeterminado")
+  if (!value) {
+    const walk = (node: Node) => {
+      if (node instanceof HTMLElement && node.tagName === "SPAN") {
+        (node.style as any).removeProperty(prop);
+        if (!node.getAttribute("style") || node.getAttribute("style") === "") {
+          const parent = node.parentNode;
+          while (node.firstChild) parent?.insertBefore(node.firstChild, node);
+          parent?.removeChild(node);
+        } else {
+          Array.from(node.childNodes).forEach(walk);
+        }
       }
-    }
-  };
-  Array.from(fragment.childNodes).forEach(walk);
+    };
+    Array.from(fragment.childNodes).forEach(walk);
+    range.insertNode(fragment);
+    sel.removeAllRanges();
+    return;
+  }
+
+  // Check if the style is already applied to the entire selection
+  const spans = Array.from(fragment.querySelectorAll("span"));
+  const hasStyle = spans.length > 0 && spans.every((s) => {
+    const v = (s.style as any)[prop];
+    if (!v) return false;
+    return v === value;
+  });
+
+  if (hasStyle) {
+    // Remove the style
+    const walk = (node: Node) => {
+      if (node instanceof HTMLElement && node.tagName === "SPAN") {
+        (node.style as any).removeProperty(prop);
+        if (!node.getAttribute("style") || node.getAttribute("style") === "") {
+          const parent = node.parentNode;
+          while (node.firstChild) parent?.insertBefore(node.firstChild, node);
+          parent?.removeChild(node);
+        } else {
+          Array.from(node.childNodes).forEach(walk);
+        }
+      }
+    };
+    Array.from(fragment.childNodes).forEach(walk);
+  } else {
+    // Apply the style
+    const span = document.createElement("span");
+    (span.style as any)[prop] = value;
+    span.appendChild(fragment);
+    range.insertNode(span);
+    sel.removeAllRanges();
+    return;
+  }
+
   range.insertNode(fragment);
   sel.removeAllRanges();
 }
 
-/** Apply an inline style to the selection by wrapping in a span. */
-function applyStyleToSelection(style: Record<string, string>) {
+/**
+ * Check if the selection has a given inline style.
+ * Uses document.queryCommandState for native commands (bold, underline)
+ * and DOM ancestor walking for custom styles (color, fontSize).
+ */
+function selectionHasStyle(prop: string, value: string): boolean {
   const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-  const range = sel.getRangeAt(0);
-  const fragment = range.extractContents();
-  const span = document.createElement("span");
-  Object.assign(span.style, style);
-  span.appendChild(fragment);
-  range.insertNode(span);
-  sel.removeAllRanges();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
+
+  // For bold/underline, use native command state (most reliable)
+  if (prop === "fontWeight") return document.queryCommandState("bold");
+  if (prop === "textDecoration") return document.queryCommandState("underline");
+
+  // For custom styles, walk ancestors
+  let node: Node | null = sel.getRangeAt(0).startContainer;
+  while (node && node !== document.body) {
+    if (node instanceof HTMLElement && node.tagName === "SPAN") {
+      const v = (node.style as any)[prop];
+      if (v && v === value) return true;
+    }
+    node = node.parentNode;
+  }
+  return false;
 }
 
 // ── Lightbox ───────────────────────────────────────────────────────
@@ -623,10 +651,7 @@ function FormatToolbar() {
           className={`gap-1.5 px-3 ${selectionHasStyle("fontWeight", "bold") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            // Use execCommand for reliable toggle, then sync content
             document.execCommand("bold");
-            // Also remove any custom span fontWeight if present
-            removeStyleFromSelection("fontWeight");
           }}
           title="Negrita"
         >
@@ -641,10 +666,7 @@ function FormatToolbar() {
           className={`gap-1.5 px-3 ${selectionHasStyle("textDecoration", "underline") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            // Use execCommand for reliable toggle, then sync content
             document.execCommand("underline");
-            // Also remove any custom span textDecoration if present
-            removeStyleFromSelection("textDecoration");
           }}
           title="Subrayado"
         >
@@ -691,14 +713,10 @@ function FormatToolbar() {
                     onMouseDown={(e) => {
                       e.preventDefault();
                       if (c.value) {
-                        // Toggle: if same color is already applied, remove it
-                        if (selectionHasStyle("color", c.value)) {
-                          removeStyleFromSelection("color");
-                        } else {
-                          applyStyleToSelection({ color: c.value });
-                        }
+                        toggleStyleOnSelection("color", c.value);
                       } else {
-                        removeStyleFromSelection("color");
+                        // "Predeterminado" — remove any color
+                        toggleStyleOnSelection("color", "");
                       }
                       setShowColors(false);
                     }}
@@ -708,7 +726,7 @@ function FormatToolbar() {
               <input
                 type="color"
                 className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
-                onChange={(e) => { applyStyleToSelection({ color: e.target.value }); setShowColors(false); }}
+                onChange={(e) => { toggleStyleOnSelection("color", e.target.value); setShowColors(false); }}
               />
               <button type="button" className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowColors(false)}>✕</button>
             </div>
@@ -735,11 +753,7 @@ function FormatToolbar() {
                     className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${selectionHasStyle("fontSize", s.value) ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      if (selectionHasStyle("fontSize", s.value)) {
-                        removeStyleFromSelection("fontSize");
-                      } else {
-                        applyStyleToSelection({ fontSize: s.value });
-                      }
+                      toggleStyleOnSelection("fontSize", s.value);
                       setShowSizes(false);
                     }}
                   >
@@ -1184,7 +1198,8 @@ function CommentsModal({
       </div>
 
       {/* Post preview */}
-      <div className="border-b border-border/40 bg-card/50 px-5 py-4">
+      <div className="border-b-2 border-border/60 bg-card/30 px-5 py-4">
+        <p className="mb-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Publicación</p>
         <div className="flex items-start gap-3">
           <Avatar className="h-9 w-9 shrink-0 border border-border/50">
             <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
@@ -1208,6 +1223,9 @@ function CommentsModal({
 
       {/* Comments list */}
       <div className="flex-1 overflow-y-auto px-5 py-3">
+        {topLevelComments.length > 0 && (
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Comentarios</p>
+        )}
         {topLevelComments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <MessageCircle className="h-8 w-8 text-muted-foreground/30" />

@@ -19,6 +19,8 @@ import {
   MessageCircle,
   Reply,
   Search,
+  Star,
+  Share2,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1009,6 +1011,20 @@ function PostCard({
             </motion.span>
             <span className="tabular-nums">{post.likes > 0 ? post.likes : ""}</span>
           </motion.button>
+          {/* Favorites */}
+          <button
+            type="button"
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-yellow-500"
+          >
+            <Star className="h-4 w-4" />
+          </button>
+          {/* Share */}
+          <button
+            type="button"
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
           {currentUserId === post.authorId && (
             <button
               type="button"
@@ -1259,15 +1275,16 @@ function CommentsModal({
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-border/30">
+          <div className="flex flex-col gap-3">
             {topLevelComments.map((comment) => (
-              <CommentItem
-                key={comment._id}
-                comment={comment}
-                currentUserId={currentUserId}
-                onReply={(id, name) => setReplyTo({ id, name })}
-                postId={post._id}
-              />
+              <div key={comment._id} className="rounded-xl border border-border/40 bg-card/50 px-3 py-2">
+                <CommentItem
+                  comment={comment}
+                  currentUserId={currentUserId}
+                  onReply={(id, name) => setReplyTo({ id, name })}
+                  postId={post._id}
+                />
+              </div>
             ))}
             <div ref={commentsEndRef} />
           </div>

@@ -28,6 +28,7 @@ import {
   Home,
   User,
   ArrowLeft,
+  Newspaper,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -2451,46 +2452,46 @@ export default function Dashboard() {
           <AnimatePresence mode="wait" initial={false}>
             {posts === undefined ? null : posts.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                className="rounded-2xl border border-border/40 bg-card/50 py-14 px-6 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25 }}
+                className="rounded-2xl border border-border/40 bg-card/50 px-6 py-16"
               >
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6z" />
-                  </svg>
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/8">
+                    <Newspaper className="h-7 w-7 text-primary/60" />
+                  </div>
+                  {activeTab === "forYou" && (
+                    <>
+                      <p className="text-sm font-semibold text-foreground">
+                        No hay publicaciones para ti
+                      </p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Cuando haya publicaciones nuevas, aparecerán aquí.
+                      </p>
+                    </>
+                  )}
+                  {activeTab === "following" && (
+                    <>
+                      <p className="text-sm font-semibold text-foreground">
+                        No hay publicaciones de tus seguidos
+                      </p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Sigue a otras personas para ver sus publicaciones aquí.
+                      </p>
+                    </>
+                  )}
+                  {activeTab === "popular" && (
+                    <>
+                      <p className="text-sm font-semibold text-foreground">
+                        No hay tendencias aún
+                      </p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Las publicaciones con más interacciones aparecerán aquí.
+                      </p>
+                    </>
+                  )}
                 </div>
-                {activeTab === "forYou" && (
-                  <>
-                    <p className="text-sm font-medium text-foreground">
-                      No hay publicaciones para ti
-                    </p>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Cuando haya publicaciones nuevas, aparecerán aquí.
-                    </p>
-                  </>
-                )}
-                {activeTab === "following" && (
-                  <>
-                    <p className="text-sm font-medium text-foreground">
-                      No hay publicaciones de tus seguidos
-                    </p>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Sigue a otras personas para ver sus publicaciones aquí.
-                    </p>
-                  </>
-                )}
-                {activeTab === "popular" && (
-                  <>
-                    <p className="text-sm font-medium text-foreground">
-                      No hay tendencias aún
-                    </p>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Las publicaciones con más interacciones aparecerán aquí.
-                    </p>
-                  </>
-                )}
               </motion.div>
             ) : (
               <motion.div

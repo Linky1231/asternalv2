@@ -97,6 +97,13 @@ export const list = query({
           image?: string;
         } | null;
 
+        // Resolve author avatar URL
+        let authorImageUrl: string | undefined;
+        if (author?.image) {
+          const url = await ctx.storage.getUrl(author.image);
+          authorImageUrl = url ?? undefined;
+        }
+
         const mediaUrls = post.media
           ? await Promise.all(
               post.media.map(async (m: { storageId: string; type: "image" | "video"; mime?: string }) => ({
@@ -146,6 +153,7 @@ export const list = query({
           ...post,
           authorName: author?.name ?? "Anónimo",
           authorImage: author?.image,
+          authorImageUrl,
           mediaUrls,
           documentUrls,
           likedByMe,

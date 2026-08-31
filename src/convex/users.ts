@@ -74,6 +74,16 @@ export const getCurrentUser = async (ctx: QueryCtx) => {
 };
 
 /**
+ * Get the URL for a user's avatar image from storage.
+ */
+export const getAvatarUrl = query({
+  args: { storageId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+/**
  * Update the current user's profile (name and/or image).
  */
 export const updateProfile = mutation({

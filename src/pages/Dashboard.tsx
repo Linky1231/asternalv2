@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import ProfilePage from "./ProfilePage";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Heart,
   Trash2,
@@ -1188,6 +1189,9 @@ function PostCard({
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
           <Avatar className="h-10 w-10 shrink-0 border border-border/50">
+            {(post as any).authorImageUrl && (
+              <AvatarImage src={(post as any).authorImageUrl} alt={post.authorName} className="object-cover" />
+            )}
             <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
               {getInitials(post.authorName)}
             </AvatarFallback>
@@ -1681,6 +1685,7 @@ export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"forYou" | "following" | "popular">("forYou");
+  const [currentView, setCurrentView] = useState<"feed" | "profile">("feed");
   const posts = useQuery(api.posts.list, { sortBy: activeTab });
   const createPost = useMutation(api.posts.create);
   const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
@@ -2069,6 +2074,9 @@ export default function Dashboard() {
 
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 pt-6 pb-24 sm:pt-10 sm:pb-28">
+        {currentView === "profile" ? (
+          <ProfilePage onBack={() => setCurrentView("feed")} />
+        ) : (<>
         {/* Composer */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -2291,29 +2299,7 @@ export default function Dashboard() {
         {/* Feed */}
         <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
           <AnimatePresence mode="wait" initial={false}>
-            {posts === undefined ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <motion.div
-                  key={`skeleton-${i}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2, delay: i * 0.05 }}
-                  className="animate-pulse rounded-2xl border border-border/60 bg-card p-5"
-                >
-                  <div className="flex items-start gap-3.5">
-                    <div className="h-10 w-10 rounded-full bg-muted" />
-                    <div className="flex-1 space-y-3">
-                      <div className="h-3 w-24 rounded bg-muted" />
-                      <div className="space-y-2">
-                        <div className="h-3 w-full rounded bg-muted" />
-                        <div className="h-3 w-3/4 rounded bg-muted" />
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))
-            ) : posts.length === 0 ? (
+            {posts === undefined ? null : posts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -2370,6 +2356,7 @@ export default function Dashboard() {
                   key={post._id}
                   post={{
                     ...post,
+                    authorImageUrl: (post as any).authorImageUrl ?? undefined,
                     documentUrls: (post as any).documentUrls ?? [],
                     hashtags: (post as any).hashtags ?? [],
                   }}
@@ -2388,6 +2375,8 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
         </div>
+        </>
+        )}
       </main>
 
       {/* Lightbox */}
@@ -2445,19 +2434,19 @@ export default function Dashboard() {
         <div className="mx-auto flex max-w-2xl items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
-            onClick={() => navigate("/dashboard")}
-            className="flex flex-col items-center gap-0.5 px-4 py-1 text-primary"
+            onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className={`flex flex-col items-center gap-0.5 px-4 py-1 transition-colors ${currentView === "feed" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
           >
             <Home className="h-5 w-5" />
-            <span className="text-[10px] font-semibold">Inicio</span>
+            <span className={`text-[10px] ${currentView === "feed" ? "font-semibold" : "font-medium"}`}>Inicio</span>
           </button>
           <button
             type="button"
-            onClick={() => navigate("/profile")}
-            className="flex flex-col items-center gap-0.5 px-4 py-1 text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className={`flex flex-col items-center gap-0.5 px-4 py-1 transition-colors ${currentView === "profile" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
           >
             <User className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Perfil</span>
+            <span className={`text-[10px] ${currentView === "profile" ? "font-semibold" : "font-medium"}`}>Perfil</span>
           </button>
         </div>
       </nav>

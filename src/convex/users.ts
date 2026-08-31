@@ -91,6 +91,7 @@ export const updateProfile = mutation({
     name: v.optional(v.string()),
     image: v.optional(v.string()),
     bio: v.optional(v.string()),
+    title: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -108,6 +109,9 @@ export const updateProfile = mutation({
     }
     if (args.bio !== undefined) {
       updates.bio = args.bio.slice(0, 200);
+    }
+    if (args.title !== undefined) {
+      updates.title = args.title.slice(0, 60);
     }
 
     if (Object.keys(updates).length > 0) {

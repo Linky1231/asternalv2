@@ -27,6 +27,7 @@ const schema = defineSchema(
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(roleValidator),
       bio: v.optional(v.string()),
+      title: v.optional(v.string()),
     }).index("email", ["email"]),
 
     posts: defineTable({

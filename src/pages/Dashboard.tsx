@@ -275,11 +275,16 @@ function removeStyleFromFragment(fragment: DocumentFragment, prop: string) {
 function removeStyleFromSelection(prop: string) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-  const range = sel.getRangeAt(0);
+  const range = sel.getRangeAt(0).cloneRange();
+  // Restore selection first
+  sel.removeAllRanges();
+  sel.addRange(range);
   const fragment = range.extractContents();
   removeStyleFromFragment(fragment, prop);
   range.insertNode(fragment);
+  // Restore selection after DOM modification
   sel.removeAllRanges();
+  sel.addRange(range);
 }
 
 /**
@@ -290,7 +295,10 @@ function removeStyleFromSelection(prop: string) {
 function applyStyleToSelection(prop: string, value: string) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-  const range = sel.getRangeAt(0);
+  const range = sel.getRangeAt(0).cloneRange();
+  // Restore selection to ensure it's valid
+  sel.removeAllRanges();
+  sel.addRange(range);
   const fragment = range.extractContents();
   // Remove any existing value of this property first
   removeStyleFromFragment(fragment, prop);
@@ -1162,6 +1170,7 @@ function PostCard({
   onOpenLightbox,
   onOpenComments,
   onOpenProfile,
+  isAdmin,
   postNumber,
 }: {
   post: {
@@ -1185,6 +1194,7 @@ function PostCard({
   onFollow: (userId: string) => void;
   onRequestUnfollow: (userId: string, name: string) => void;
   onRequestDelete: (postId: string) => void;
+  isAdmin?: boolean;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
   onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[]; postNumber: number }) => void;
   onOpenProfile: (userId: string) => void;
@@ -1356,7 +1366,7 @@ function PostCard({
             <Share2 className="h-4 w-4" />
             <span className="hidden sm:inline">Compartir</span>
           </motion.button>
-          {currentUserId === post.authorId && (
+          {(currentUserId === post.authorId || isAdmin) && (
             <motion.button
               type="button"
               whileTap={{ scale: 0.9 }}
@@ -1729,9 +1739,9 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
         {userData ? (
           <div>
             {/* Profile card + bio + separator + posts — all appear together */}
-            <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
+            <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 outline-none">
               <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-24 w-24 border-2 border-border/50">
+                <Avatar className="h-24 w-24 border-2 border-border/50 outline-none">
                   {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
                   <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                     {getInitials(userData.authorName)}
@@ -1795,6 +1805,8 @@ export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"forYou" | "following" | "popular">("forYou");
+  const userRole = useQuery(api.users.getRole);
+  const isAdmin = userRole === "admin";
   const [currentView, setCurrentView] = useState<"feed" | "profile" | "userProfile">("feed");
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const posts = useQuery(api.posts.list, { sortBy: activeTab });
@@ -1804,6 +1816,7 @@ export default function Dashboard() {
   const toggleFavoriteMutation = useMutation(api.posts.toggleFavorite);
   const toggleFollowMutation = useMutation(api.follows.toggleFollow);
   const deletePost = useMutation(api.posts.remove);
+  const deletePostAsAdmin = useMutation(api.users.deletePostAsAdmin);
 
   const [content, setContent] = useState("");
   const [postTitle, setPostTitle] = useState("");
@@ -2105,7 +2118,11 @@ export default function Dashboard() {
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await deletePost({ postId: deleteTarget as any });
+      if (isAdmin) {
+        await deletePostAsAdmin({ postId: deleteTarget as any });
+      } else {
+        await deletePost({ postId: deleteTarget as any });
+      }
     } catch (err) {
       console.error("Error al eliminar:", err);
     }
@@ -2488,6 +2505,7 @@ export default function Dashboard() {
                   onOpenLightbox={openLightbox}
                   onOpenComments={setCommentsModalPost}
                   onOpenProfile={(userId) => { setViewingUserId(userId); setCurrentView("userProfile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  isAdmin={isAdmin}
                   postNumber={posts.length - idx}
                 />
               ))}

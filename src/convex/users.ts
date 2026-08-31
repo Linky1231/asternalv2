@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { roleValidator } from "./schema";
 
 /**
  * Search users by name for @mentions.
@@ -129,5 +130,166 @@ export const generateUploadUrl = mutation({
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("No autenticado");
     return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/**
+ * Bootstrap the first admin. Can only be called once —
+ * after an admin exists, this mutation does nothing.
+ * Promotes the user with the given email to admin.
+ */
+export const bootstrapAdmin = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    // Check if any admin already exists
+    const allUsers = await ctx.db.query("users").collect();
+    const existingAdmin = allUsers.find((u) => (u as any).role === "admin");
+    if (existingAdmin) {
+      throw new Error("Ya existe un administrador. Usa setRole para promover usuarios.");
+    }
+
+    const emailLower = args.email.toLowerCase();
+
+    // 1. Check users.email
+    let user = allUsers.find((u) => u.email?.toLowerCase() === emailLower);
+
+    // 2. Check authAccounts.providerAccountId (email-otp stores email here)
+    if (!user) {
+      const authAccounts = await ctx.db.query("authAccounts" as any).collect() as any[];
+      const matchingAccount = authAccounts.find(
+        (a: any) => a.providerAccountId?.toLowerCase() === emailLower,
+      );
+      if (matchingAccount) {
+        user = allUsers.find((u) => u._id === matchingAccount.userId);
+      }
+    }
+
+    // 3. Search by name
+    if (!user) {
+      const emailPart = emailLower.split("@")[0];
+      user = allUsers.find((u) => u.name?.toLowerCase().includes(emailPart));
+    }
+
+    if (!user) {
+      throw new Error(`No se encontró ningún usuario con el email: ${args.email}`);
+    }
+
+    await ctx.db.patch(user._id, { role: "admin" } as any);
+    return { success: true, userId: user._id, name: user.name };
+  },
+});
+
+/**
+ * Set a user's role. Only callable by admins.
+ */
+export const setRole = mutation({
+  args: { userId: v.id("users"), role: roleValidator },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (currentUserId === null) throw new Error("No autenticado");
+    const currentUser = await ctx.db.get(currentUserId);
+    if ((currentUser as any)?.role !== "admin") {
+      throw new Error("Solo los administradores pueden cambiar roles");
+    }
+    await ctx.db.patch(args.userId, { role: args.role } as any);
+    return { success: true };
+  },
+});
+
+/**
+ * Delete any post (admin only).
+ */
+export const deletePostAsAdmin = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (currentUserId === null) throw new Error("No autenticado");
+    const currentUser = await ctx.db.get(currentUserId);
+    if ((currentUser as any)?.role !== "admin") {
+      throw new Error("Solo los administradores pueden eliminar publicaciones de otros usuarios");
+    }
+
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Publicación no encontrada");
+
+    // Delete likes
+    const likesList = await ctx.db.query("likes").withIndex("by_post", (q) => q.eq("postId", args.postId)).collect();
+    for (const like of likesList) await ctx.db.delete(like._id);
+
+    // Delete favorites
+    const favsList = await ctx.db.query("favorites").withIndex("by_post", (q) => q.eq("postId", args.postId)).collect();
+    for (const fav of favsList) await ctx.db.delete(fav._id);
+
+    // Delete comments
+    const commentsList = await ctx.db.query("comments").withIndex("by_post", (q) => q.eq("postId", args.postId)).collect();
+    for (const comment of commentsList) await ctx.db.delete(comment._id);
+
+    // Delete media from storage
+    if (post.media) {
+      for (const m of post.media) await ctx.storage.delete(m.storageId);
+    }
+
+    // Delete documents from storage
+    if ((post as any).documents) {
+      for (const d of (post as any).documents) await ctx.storage.delete(d.storageId);
+    }
+
+    await ctx.db.delete(args.postId);
+    return { success: true };
+  },
+});
+
+/**
+ * Temporary: reset a user's role to user. Admin only.
+ */
+export const resetRole = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { role: "user" } as any);
+    return { success: true };
+  },
+});
+
+/**
+ * Temporary: list all auth accounts to find emails.
+ */
+export const listAuthEmails = query({
+  args: {},
+  handler: async (ctx) => {
+    const accounts = await ctx.db.query("authAccounts" as any).collect() as any[];
+    return accounts
+      .filter((a: any) => a.provider !== "anonymous")
+      .map((a: any) => ({
+        _id: a._id,
+        userId: a.userId,
+        provider: a.provider,
+        providerAccountId: a.providerAccountId,
+      }));
+  },
+});
+
+export const listAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.map((u) => ({
+      _id: u._id,
+      name: u.name,
+      email: u.email,
+      role: (u as any).role,
+    }));
+  },
+});
+
+/**
+ * Get the current user's role.
+ */
+export const getRole = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    return (user as any)?.role ?? null;
   },
 });

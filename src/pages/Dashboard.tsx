@@ -441,24 +441,24 @@ function Lightbox({
         className="flex max-h-[90vh] max-w-[90vw] items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           {current.type === "video" ? (
             <motion.div
               key={`video-${index}`}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
             >
               <LightboxVideo url={current.url} mime={current.mime} />
             </motion.div>
           ) : (
             <motion.img
               key={`img-${index}`}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               src={current.url}
               alt="Tamaño completo"
               className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain"
@@ -1692,73 +1692,82 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 24 }}
+      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+      className="min-h-screen bg-background"
     >
-      <div className="mb-5 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <span className="text-sm font-semibold">{userData?.authorName ?? "Perfil"}</span>
+      {/* Header */}
+      <div className="sticky top-0 z-50 border-b border-border/50 bg-background">
+        <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-semibold">{userData?.authorName ?? "Perfil"}</span>
+        </div>
       </div>
 
-      {userData ? (
-        <>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-24 w-24 border-2 border-border/50">
-                {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
-                <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
-                  {getInitials(userData.authorName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center">
-                <p className="text-lg font-bold text-card-foreground">{userData.authorName}</p>
-                {(userData as any).authorTitle && <p className="mt-0.5 text-sm text-muted-foreground">{(userData as any).authorTitle}</p>}
+      <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
+        {userData ? (
+          <>
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
+              <div className="flex flex-col items-center gap-4">
+                <Avatar className="h-24 w-24 border-2 border-border/50">
+                  {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
+                  <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
+                    {getInitials(userData.authorName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-card-foreground">{userData.authorName}</p>
+                  {(userData as any).authorTitle && <p className="mt-0.5 text-sm text-muted-foreground">{(userData as any).authorTitle}</p>}
+                </div>
               </div>
-            </div>
-          </motion.div>
-
-          {(userData as any).authorBio && (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-              <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
             </motion.div>
-          )}
 
-          <p className="mt-6 mb-3 text-xs font-semibold text-muted-foreground">Publicaciones</p>
-          <div className="flex flex-col gap-4">
-            {(userPosts ?? []).length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">Este usuario no tiene publicaciones.</p>
-            ) : (
-              (userPosts ?? []).map((post, idx) => (
-                <PostCard
-                  key={post._id}
-                  post={post as any}
-                  currentUserId={undefined}
-                  onToggleLike={() => {}}
-                  onToggleFavorite={() => {}}
-                  onFollow={() => {}}
-                  onRequestUnfollow={() => {}}
-                  onRequestDelete={() => {}}
-                  onOpenLightbox={() => {}}
-                  onOpenComments={() => {}}
-                  onOpenProfile={() => {}}
-                  postNumber={(userPosts ?? []).length - idx}
-                />
-              ))
+            {(userData as any).authorBio && (
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.06, ease: [0.25, 0.1, 0.25, 1] }} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+                <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
+              </motion.div>
             )}
+
+            <p className="mt-8 mb-3 text-xs font-semibold text-muted-foreground">Publicaciones</p>
+            <div className="flex flex-col gap-4 pb-24">
+              {(userPosts ?? []).length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">Este usuario no tiene publicaciones.</p>
+              ) : (
+                (userPosts ?? []).map((post, idx) => (
+                  <PostCard
+                    key={post._id}
+                    post={post as any}
+                    currentUserId={undefined}
+                    onToggleLike={() => {}}
+                    onToggleFavorite={() => {}}
+                    onFollow={() => {}}
+                    onRequestUnfollow={() => {}}
+                    onRequestDelete={() => {}}
+                    onOpenLightbox={() => {}}
+                    onOpenComments={() => {}}
+                    onOpenProfile={() => {}}
+                    postNumber={(userPosts ?? []).length - idx}
+                  />
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+            <p className="mt-3 text-sm text-muted-foreground">Cargando perfil…</p>
           </div>
-        </>
-      ) : (
-        <p className="py-10 text-center text-sm text-muted-foreground">Cargando perfil…</p>
-      )}
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -2159,7 +2168,7 @@ export default function Dashboard() {
       </nav>
 
       {/* ── Main ─────────────────────────────────────────────── */}
-      <main className="mx-auto max-w-2xl px-4 pt-6 pb-24 sm:pt-10 sm:pb-28">
+      <main className="mx-auto max-w-2xl px-4 pt-6 pb-20 sm:pt-10 sm:pb-24">
         {currentView === "userProfile" ? (
           <UserProfileView userId={viewingUserId!} onBack={() => { setCurrentView("feed"); setViewingUserId(null); }} />
         ) : currentView === "profile" ? (
@@ -2391,19 +2400,17 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Feed */}
-        <div className="mt-6 flex min-h-[280px] flex-col gap-4 sm:mt-8 sm:gap-5">
+        <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
           <AnimatePresence mode="wait" initial={false}>
             {posts === undefined ? null : posts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                className="flex flex-1 items-center justify-center rounded-2xl border border-border/40 bg-card/50 py-14 px-6"
+                className="rounded-2xl border border-border/40 bg-card/50 py-14 px-6 text-center"
               >
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                  </svg>
+                  <MessageCircle className="h-6 w-6 text-primary" />
                 </div>
                 {activeTab === "forYou" && (
                   <>

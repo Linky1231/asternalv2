@@ -265,38 +265,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             <p className="text-lg font-bold text-card-foreground">{user?.name ?? "Sin nombre"}</p>
           )}
 
-          {/* Title */}
-          {editing ? (
-            <div className="flex w-full max-w-xs items-center gap-2">
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                maxLength={60}
-                placeholder="Título (opcional)"
-                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              />
-              <button
-                type="button"
-                onClick={handleSaveTitle}
-                disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-              >
-                {savingTitle ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          ) : (
-            currentTitle && <p className="text-sm text-muted-foreground">{currentTitle}</p>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Bio — inline editable */}
-      <motion.div {...stagger(1)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+          {/* Bio — inline editable */}
+      
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
           {editing && <Pencil className="h-3 w-3 text-muted-foreground" />}
@@ -333,6 +303,37 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         ) : (
           <p className="mt-2 text-sm text-muted-foreground/50 italic">Sin descripción</p>
         )}
+      
+
+          {/* Title */}
+
+          {editing ? (
+            <div className="flex w-full max-w-xs items-center gap-2">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={60}
+                placeholder="Título (opcional)"
+                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              />
+              <button
+                type="button"
+                onClick={handleSaveTitle}
+                disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+              >
+                {savingTitle ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          ) : (
+            currentTitle && <p className="text-sm text-muted-foreground">{currentTitle}</p>
+          )}
+        </div>
       </motion.div>
 
       {/* Sign out */}

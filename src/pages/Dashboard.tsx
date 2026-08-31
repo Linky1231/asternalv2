@@ -1202,10 +1202,10 @@ function PostCard({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97, y: -8 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      exit={{ opacity: 0, scale: 0.97, y: -6 }}
+      transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
       className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-border"
     >
       <div className="p-4 sm:p-5">
@@ -1710,13 +1710,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
   const userData = userPosts && userPosts.length > 0 ? userPosts[0] : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 24 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 24 }}
-      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-      className="min-h-screen bg-background"
-    >
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-50 border-b border-border/50 bg-background">
         <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
@@ -1733,8 +1727,9 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
 
       <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
         {userData ? (
-          <>
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
+          <div>
+            {/* Profile card + bio + separator + posts — all appear together */}
+            <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
               <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-24 w-24 border-2 border-border/50">
                   {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
@@ -1747,13 +1742,13 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
                   {(userData as any).authorTitle && <p className="mt-0.5 text-sm text-muted-foreground">{(userData as any).authorTitle}</p>}
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {(userData as any).authorBio && (
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.06, ease: [0.25, 0.1, 0.25, 1] }} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+              <div className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
                 <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
-              </motion.div>
+              </div>
             )}
 
             <div className="mt-8 mb-4 border-t border-border/40 pt-6">
@@ -1781,7 +1776,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
                 ))
               )}
             </div>
-          </>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
@@ -1789,7 +1784,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -2197,9 +2192,9 @@ export default function Dashboard() {
         ) : (<>
         {/* Composer */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.05, ease: [0.25, 0.1, 0.25, 1] }}
+          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
           className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
@@ -2392,7 +2387,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
+          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
           className="mt-4 overflow-hidden rounded-2xl border border-border/60 bg-card"
         >
           <div className="relative flex">

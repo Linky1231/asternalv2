@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { query, QueryCtx } from "./_generated/server";
+import { mutation, query, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -72,3 +72,44 @@ export const getCurrentUser = async (ctx: QueryCtx) => {
   }
   return await ctx.db.get(userId);
 };
+
+/**
+ * Update the current user's profile (name and/or image).
+ */
+export const updateProfile = mutation({
+  args: {
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("No autenticado");
+
+    const updates: Record<string, string> = {};
+    if (args.name !== undefined) {
+      const trimmed = args.name.trim();
+      if (trimmed.length === 0) throw new Error("El nombre no puede estar vacío");
+      if (trimmed.length > 40) throw new Error("El nombre es demasiado largo");
+      updates.name = trimmed;
+    }
+    if (args.image !== undefined) {
+      updates.image = args.image;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await ctx.db.patch(userId, updates);
+    }
+  },
+});
+
+/**
+ * Generate an upload URL for profile pictures.
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("No autenticado");
+    return await ctx.storage.generateUploadUrl();
+  },
+});

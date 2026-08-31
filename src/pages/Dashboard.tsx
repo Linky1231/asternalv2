@@ -24,6 +24,8 @@ import {
   UserX,
   FileText,
   Paperclip,
+  Home,
+  User,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -2065,35 +2067,8 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* ── Tabs ─────────────────────────────────────────────── */}
-      <div className="sticky top-14 z-40 border-b border-border/40 bg-background">
-        <div className="mx-auto flex max-w-2xl">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-              className={`relative flex-1 py-3 text-center text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                  transition={{ type: "spring", stiffness: 600, damping: 40 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* ── Main ─────────────────────────────────────────────── */}
-      <main className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
+      <main className="mx-auto max-w-2xl px-4 pt-6 pb-24 sm:pt-10 sm:pb-28">
         {/* Composer */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -2282,6 +2257,33 @@ export default function Dashboard() {
 
               {/* Formatting toolbar */}
               <FormatToolbar />
+
+              {/* Tabs — below composer */}
+              <div className="mt-4 border-t border-border/40">
+                <div className="flex">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      className={`relative flex-1 py-2.5 text-center text-xs font-semibold transition-colors ${
+                        activeTab === tab.id
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {tab.label}
+                      {activeTab === tab.id && (
+                        <motion.div
+                          layoutId="activeTab"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                          transition={{ type: "spring", stiffness: 600, damping: 40 }}
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -2437,6 +2439,31 @@ export default function Dashboard() {
         onConfirm={handleConfirmUnfollow}
         onCancel={() => setUnfollowTarget(null)}
       />
+
+      {/* ── Bottom Navigation Bar ─────────────────────────── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-background/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-2xl items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard")}
+            className="flex flex-col items-center gap-0.5 px-4 py-1 text-primary"
+          >
+            <Home className="h-5 w-5" />
+            <span className="text-[10px] font-semibold">Inicio</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="flex flex-col items-center gap-0.5 px-4 py-1 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <User className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Perfil</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Bottom padding to account for fixed nav */}
+      <div className="h-16" />
     </div>
   );
 }

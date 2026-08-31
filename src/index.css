@@ -165,18 +165,29 @@ html {
 *,
 *::before,
 *::after {
-  transition-property: color, background-color, border-color, box-shadow, opacity, transform, fill, stroke;
+  transition-property: color, background-color, border-color, box-shadow, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
 
-/* Exclude elements that manage their own timing */
+/* Exclude elements that manage their own timing (Framer Motion, spinners, etc.)
+   This prevents CSS transitions from conflicting with Framer Motion's
+   inline style animations, which causes flickering on mobile Safari. */
 .animate-spin,
 .animate-pulse,
 .animate-spin-slow,
-[data-framer-motion] * {
+[data-framer-motion] *,
+[data-framer-motion] {
   transition-duration: unset;
   transition-property: unset;
+}
+
+/* Smooth transform/opacity transitions for specific elements (not applied globally
+   to avoid conflicts with Framer Motion animations on mobile Safari) */
+.transition-smooth {
+  transition-property: opacity, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 /* Subtle focus ring animation */

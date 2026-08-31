@@ -973,7 +973,7 @@ function CommentItem({
             >
               <motion.span
                 key={`${comment.likedByMe}-${comment._id}`}
-                animate={comment.likedByMe ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+                animate={comment.likedByMe ? { scale: [1, 1.25, 1] } : { scale: 1 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
                 <Heart className={`h-3 w-3 transition-colors duration-150 ${comment.likedByMe ? "fill-primary text-primary" : "fill-transparent"}`} />
@@ -1138,9 +1138,10 @@ function PostCard({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
+      exit={{ opacity: 0, scale: 0.97, y: -8 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
       className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-border"
     >
       <div className="p-4 sm:p-5">
@@ -1159,12 +1160,13 @@ function PostCard({
               {currentUserId && post.authorId !== currentUserId && (
                 <motion.button
                   type="button"
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.03 }}
                   onClick={() => isFollowingUser ? onRequestUnfollow(post.authorId, post.authorName) : onFollow(post.authorId)}
-                  className={`ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors ${
+                  className={`ml-auto text-xs font-semibold px-3.5 py-1 rounded-full ${
                     isFollowingUser
                       ? "bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      : "bg-primary/10 text-primary hover:bg-primary/20"
+                      : "bg-primary text-primary-foreground shadow-sm shadow-primary/20 hover:bg-primary/90"
                   }`}
                 >
                   {isFollowingUser ? "Siguiendo" : "Seguir"}
@@ -1321,7 +1323,7 @@ function MentionPicker({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur-md">
+      <div className="flex items-center gap-3 border-b border-border/50 bg-background px-4 py-3">
         <button
           type="button"
           onClick={onClose}
@@ -1474,7 +1476,7 @@ function CommentsModal({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur-md sm:px-5 sm:py-4">
+      <div className="border-b border-border/50 bg-background px-4 py-3 sm:px-5 sm:py-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -1541,7 +1543,7 @@ function CommentsModal({
       </div>
 
       {/* Comment input (fixed at bottom) */}
-      <div className="border-t border-border/50 bg-background/95 px-4 py-3 backdrop-blur-md sm:px-5">
+      <div className="border-t border-border/50 bg-background px-4 py-3 sm:px-5">
         <AnimatePresence>
           {replyTo && (
             <motion.div
@@ -1915,11 +1917,8 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Nav ──────────────────────────────────────────────── */}
-      <motion.nav
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-md">
+      <nav
+        className="sticky top-0 z-50 border-b border-border/50 bg-background">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/assets/67385.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -1940,10 +1939,10 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* ── Tabs ─────────────────────────────────────────────── */}
-      <div className="sticky top-14 z-40 border-b border-border/40 bg-background/95 backdrop-blur-md">
+      <div className="sticky top-14 z-40 border-b border-border/40 bg-background">
         <div className="mx-auto flex max-w-2xl">
           {TABS.map((tab) => (
             <button
@@ -1975,7 +1974,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: 0.35, delay: 0.05, ease: [0.25, 0.1, 0.25, 1] }}
           className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
@@ -2113,7 +2112,7 @@ export default function Dashboard() {
 
         {/* Feed */}
         <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="popLayout" initial={false}>
             {posts === undefined ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div

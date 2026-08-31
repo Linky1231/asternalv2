@@ -2275,9 +2275,9 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
-          className="mt-4 rounded-2xl border border-border/60 bg-card"
+          className="mt-4 overflow-hidden rounded-2xl border border-border/60 bg-card"
         >
-          <div className="flex">
+          <div className="relative flex">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -2293,7 +2293,7 @@ export default function Dashboard() {
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                    className="absolute bottom-0 left-1/2 h-0.5 w-[calc(100%-1.5rem)] -translate-x-1/2 bg-primary"
                     transition={{ type: "spring", stiffness: 600, damping: 40 }}
                   />
                 )}

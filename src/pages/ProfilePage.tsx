@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Camera, Check, LogOut, User } from "lucide-react";
+import { ArrowLeft, Camera, Check, LogOut, User, Pencil } from "lucide-react";
 import { motion } from "framer-motion";
 
 function getInitials(name: string) {
@@ -24,8 +24,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const { user, signOut } = useAuth();
   const updateProfile = useMutation(api.users.updateProfile);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
-
-  // Re-query user data to get fresh image
   const currentUser = useQuery(api.users.currentUser);
   const avatarUrl = useQuery(
     api.users.getAvatarUrl,
@@ -33,22 +31,40 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   );
 
   const [name, setName] = useState(user?.name ?? "");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [bio, setBio] = useState((currentUser as any)?.bio ?? "");
+  const [savingName, setSavingName] = useState(false);
+  const [savedName, setSavedName] = useState(false);
+  const [savingBio, setSavingBio] = useState(false);
+  const [savedBio, setSavedBio] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSaveName = async () => {
-    if (!name.trim() || name.trim() === (user?.name ?? "") || saving) return;
-    setSaving(true);
+    if (!name.trim() || name.trim() === (user?.name ?? "") || savingName) return;
+    setSavingName(true);
     try {
       await updateProfile({ name: name.trim() });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setSavedName(true);
+      setTimeout(() => setSavedName(false), 2000);
     } catch (err) {
-      console.error("Error al actualizar perfil:", err);
+      console.error("Error al actualizar nombre:", err);
     } finally {
-      setSaving(false);
+      setSavingName(false);
+    }
+  };
+
+  const handleSaveBio = async () => {
+    const currentBio = (currentUser as any)?.bio ?? "";
+    if (bio === currentBio || savingBio) return;
+    setSavingBio(true);
+    try {
+      await updateProfile({ bio: bio.trim() || undefined });
+      setSavedBio(true);
+      setTimeout(() => setSavedBio(false), 2000);
+    } catch (err) {
+      console.error("Error al actualizar bio:", err);
+    } finally {
+      setSavingBio(false);
     }
   };
 
@@ -57,14 +73,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       const file = e.target.files?.[0];
       if (!file || uploadingAvatar) return;
 
-      if (!file.type.startsWith("image/")) {
-        console.warn("Solo se permiten imágenes");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        console.warn("La imagen no puede superar 5MB");
-        return;
-      }
+      if (!file.type.startsWith("image/")) return;
+      if (file.size > 5 * 1024 * 1024) return;
 
       setUploadingAvatar(true);
       try {
@@ -91,18 +101,24 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    // navigate("/") will be handled by auth state change
   };
+
+  // Stagger animation config
+  const stagger = (i: number) => ({
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.4, delay: i * 0.08, ease: [0.25, 0.1, 0.25, 1] as const },
+  });
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
     >
-      {/* Profile header inside shared space */}
-      <div className="mb-4 flex items-center gap-3">
+      {/* Profile header */}
+      <div className="mb-5 flex items-center gap-3">
         <button
           type="button"
           onClick={onBack}
@@ -114,12 +130,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       </div>
 
       {/* Avatar section */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.05, ease: [0.25, 0.1, 0.25, 1] }}
-        className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8"
-      >
+      <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
         <div className="flex flex-col items-center gap-5">
           <div className="relative">
             <Avatar className="h-24 w-24 border-2 border-border/50">
@@ -155,27 +166,16 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             <p className="text-lg font-bold text-card-foreground">
               {user?.name ?? "Sin nombre"}
             </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {user?.email ?? "Sin email"}
-            </p>
           </div>
         </div>
       </motion.div>
 
-      {/* Edit name section */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
-        className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6"
-      >
-        <h3 className="text-sm font-semibold text-card-foreground">
-          Nombre de usuario
-        </h3>
+      {/* Edit name */}
+      <motion.div {...stagger(1)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+        <h3 className="text-sm font-semibold text-card-foreground">Nombre</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Este nombre se mostrará en tus publicaciones y comentarios.
+          Se mostrará en tus publicaciones y comentarios.
         </p>
-
         <div className="mt-4 flex items-center gap-3">
           <input
             type="text"
@@ -188,26 +188,60 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           <Button
             size="sm"
             className="gap-1.5 px-4"
-            disabled={!name.trim() || name.trim() === (user?.name ?? "") || saving}
+            disabled={!name.trim() || name.trim() === (user?.name ?? "") || savingName}
             onClick={handleSaveName}
           >
-            {saving ? (
+            {savingName ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            ) : saved ? (
+            ) : savedName ? (
               <Check className="h-3.5 w-3.5" />
             ) : null}
-            {saved ? "Guardado" : "Guardar"}
+            {savedName ? "Guardado" : "Guardar"}
           </Button>
         </div>
       </motion.div>
 
+      {/* Edit bio */}
+      <motion.div {...stagger(2)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
+          <Pencil className="h-3 w-3 text-muted-foreground" />
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Cuéntale a la comunidad quién eres (máximo 200 caracteres).
+        </p>
+        <div className="mt-4">
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={200}
+            rows={3}
+            placeholder="Escribe algo sobre ti…"
+            className="w-full resize-none rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm text-card-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          />
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground tabular-nums">
+              {bio.length}/200
+            </span>
+            <Button
+              size="sm"
+              className="gap-1.5 px-4"
+              disabled={bio === ((currentUser as any)?.bio ?? "") || savingBio}
+              onClick={handleSaveBio}
+            >
+              {savingBio ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : savedBio ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : null}
+              {savedBio ? "Guardado" : "Guardar"}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Sign out */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-        className="mt-4"
-      >
+      <motion.div {...stagger(3)} className="mt-4">
         <Button
           variant="outline"
           className="w-full gap-2 text-destructive hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30"

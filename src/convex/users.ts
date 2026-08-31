@@ -90,6 +90,7 @@ export const updateProfile = mutation({
   args: {
     name: v.optional(v.string()),
     image: v.optional(v.string()),
+    bio: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -104,6 +105,9 @@ export const updateProfile = mutation({
     }
     if (args.image !== undefined) {
       updates.image = args.image;
+    }
+    if (args.bio !== undefined) {
+      updates.bio = args.bio.slice(0, 200);
     }
 
     if (Object.keys(updates).length > 0) {

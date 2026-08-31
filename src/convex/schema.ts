@@ -26,6 +26,7 @@ const schema = defineSchema(
       emailVerificationTime: v.optional(v.number()),
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(roleValidator),
+      bio: v.optional(v.string()),
     }).index("email", ["email"]),
 
     posts: defineTable({

@@ -27,6 +27,7 @@ import {
   Paperclip,
   Home,
   User,
+  ArrowLeft,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1141,6 +1142,7 @@ function PostCard({
   onRequestDelete,
   onOpenLightbox,
   onOpenComments,
+  onOpenProfile,
   postNumber,
 }: {
   post: {
@@ -1166,6 +1168,7 @@ function PostCard({
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
   onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[]; postNumber: number }) => void;
+  onOpenProfile: (userId: string) => void;
   postNumber?: number;
 }) {
   const comments = useQuery(api.comments.list, { postId: post._id as any }) ?? [];
@@ -1188,17 +1191,19 @@ function PostCard({
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
-          <Avatar className="h-10 w-10 shrink-0 border border-border/50">
-            {(post as any).authorImageUrl && (
-              <AvatarImage src={(post as any).authorImageUrl} alt={post.authorName} className="object-cover" />
-            )}
-            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-              {getInitials(post.authorName)}
-            </AvatarFallback>
-          </Avatar>
+          <button type="button" onClick={() => onOpenProfile(post.authorId)} className="shrink-0 cursor-pointer">
+            <Avatar className="h-10 w-10 border border-border/50">
+              {(post as any).authorImageUrl && (
+                <AvatarImage src={(post as any).authorImageUrl} alt={post.authorName} className="object-cover" />
+              )}
+              <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                {getInitials(post.authorName)}
+              </AvatarFallback>
+            </Avatar>
+          </button>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">{post.authorName}</span>
+              <button type="button" onClick={() => onOpenProfile(post.authorId)} className="text-sm font-semibold hover:underline cursor-pointer">{post.authorName}</button>
               <span className="text-xs text-muted-foreground">
                 {formatTime(post.createdAt)}
               </span>
@@ -1679,13 +1684,94 @@ const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════
+// User Profile View (viewing another user's profile)
+// ═══════════════════════════════════════════════════════════════════
+function UserProfileView({ userId, onBack }: { userId: string; onBack: () => void }) {
+  const userPosts = useQuery(api.posts.getUserPosts, { authorId: userId });
+  const userData = userPosts && userPosts.length > 0 ? userPosts[0] : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="mb-5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-semibold">{userData?.authorName ?? "Perfil"}</span>
+      </div>
+
+      {userData ? (
+        <>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-24 w-24 border-2 border-border/50">
+                {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
+                <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
+                  {getInitials(userData.authorName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-center">
+                <p className="text-lg font-bold text-card-foreground">{userData.authorName}</p>
+                {(userData as any).authorTitle && <p className="mt-0.5 text-sm text-muted-foreground">{(userData as any).authorTitle}</p>}
+              </div>
+            </div>
+          </motion.div>
+
+          {(userData as any).authorBio && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+              <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
+            </motion.div>
+          )}
+
+          <p className="mt-6 mb-3 text-xs font-semibold text-muted-foreground">Publicaciones</p>
+          <div className="flex flex-col gap-4">
+            {(userPosts ?? []).length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">Este usuario no tiene publicaciones.</p>
+            ) : (
+              (userPosts ?? []).map((post, idx) => (
+                <PostCard
+                  key={post._id}
+                  post={post as any}
+                  currentUserId={undefined}
+                  onToggleLike={() => {}}
+                  onToggleFavorite={() => {}}
+                  onFollow={() => {}}
+                  onRequestUnfollow={() => {}}
+                  onRequestDelete={() => {}}
+                  onOpenLightbox={() => {}}
+                  onOpenComments={() => {}}
+                  onOpenProfile={() => {}}
+                  postNumber={(userPosts ?? []).length - idx}
+                />
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <p className="py-10 text-center text-sm text-muted-foreground">Cargando perfil…</p>
+      )}
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Dashboard
 // ═══════════════════════════════════════════════════════════════════
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"forYou" | "following" | "popular">("forYou");
-  const [currentView, setCurrentView] = useState<"feed" | "profile">("feed");
+  const [currentView, setCurrentView] = useState<"feed" | "profile" | "userProfile">("feed");
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const posts = useQuery(api.posts.list, { sortBy: activeTab });
   const createPost = useMutation(api.posts.create);
   const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
@@ -2074,7 +2160,9 @@ export default function Dashboard() {
 
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 pt-6 pb-24 sm:pt-10 sm:pb-28">
-        {currentView === "profile" ? (
+        {currentView === "userProfile" ? (
+          <UserProfileView userId={viewingUserId!} onBack={() => { setCurrentView("feed"); setViewingUserId(null); }} />
+        ) : currentView === "profile" ? (
           <ProfilePage onBack={() => setCurrentView("feed")} />
         ) : (<>
         {/* Composer */}
@@ -2303,14 +2391,14 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Feed */}
-        <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
+        <div className="mt-6 flex min-h-[280px] flex-col gap-4 sm:mt-8 sm:gap-5">
           <AnimatePresence mode="wait" initial={false}>
             {posts === undefined ? null : posts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                className="rounded-2xl border border-border/40 bg-card/50 py-14 px-6 text-center"
+                className="flex flex-1 items-center justify-center rounded-2xl border border-border/40 bg-card/50 py-14 px-6"
               >
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                   <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -2374,6 +2462,7 @@ export default function Dashboard() {
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}
                   onOpenComments={setCommentsModalPost}
+                  onOpenProfile={(userId) => { setViewingUserId(userId); setCurrentView("userProfile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                   postNumber={posts.length - idx}
                 />
               ))}

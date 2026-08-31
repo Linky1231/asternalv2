@@ -12,9 +12,8 @@ import {
   User,
   MoreHorizontal,
   Pencil,
-  X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,16 +43,17 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     api.users.getAvatarUrl,
     currentUser?.image ? { storageId: currentUser.image } : "skip",
   );
+  const userPosts = useQuery(
+    api.posts.getUserPosts,
+    user?._id ? { authorId: user._id } : "skip",
+  );
 
-  // Edit mode state
+  // Inline edit state
   const [editing, setEditing] = useState(false);
-
-  // Edit form values
   const [editName, setEditName] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editBio, setEditBio] = useState("");
 
-  // Save states
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [savingName, setSavingName] = useState(false);
   const [savedName, setSavedName] = useState(false);
@@ -128,7 +128,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       if (!file || savingAvatar) return;
       if (!file.type.startsWith("image/")) return;
       if (file.size > 5 * 1024 * 1024) return;
-
       setSavingAvatar(true);
       try {
         const url = await generateUploadUrl();
@@ -152,19 +151,14 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     [savingAvatar, generateUploadUrl, updateProfile],
   );
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
+  const currentTitle = (currentUser as any)?.title ?? "";
+  const currentBio = (currentUser as any)?.bio ?? "";
 
-  // Stagger animation
   const stagger = (i: number) => ({
     initial: { opacity: 0, y: 16 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.4, delay: i * 0.08, ease: [0.25, 0.1, 0.25, 1] as const },
   });
-
-  const currentTitle = (currentUser as any)?.title ?? "";
-  const currentBio = (currentUser as any)?.bio ?? "";
 
   return (
     <motion.div
@@ -194,7 +188,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             onClick={handleCancelEdit}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <X className="h-4 w-4" />
+            <span className="text-xs font-medium">Cancelar</span>
           </button>
         ) : (
           <DropdownMenu>
@@ -216,208 +210,171 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         )}
       </div>
 
-      <AnimatePresence mode="wait">
-        {editing ? (
-          /* ═══════════════════ EDIT MODE ═══════════════════ */
-          <motion.div
-            key="edit"
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -16 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            {/* Avatar */}
-            <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <Avatar className="h-24 w-24 border-2 border-border/50">
-                    {avatarUrl && (
-                      <AvatarImage src={avatarUrl} alt={user?.name ?? ""} />
-                    )}
-                    <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
-                      {user?.name ? getInitials(user.name) : <User className="h-10 w-10" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={savingAvatar}
-                    className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-                  >
-                    {savingAvatar ? (
-                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    ) : (
-                      <Camera className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Toca la cámara para cambiar tu foto</p>
-              </div>
-            </motion.div>
-
-            {/* Name */}
-            <motion.div {...stagger(1)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-              <label className="text-sm font-semibold text-card-foreground">Nombre</label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Se mostrará en tus publicaciones y comentarios.
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  maxLength={40}
-                  placeholder="Tu nombre"
-                  className="flex-1 rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm text-card-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-                />
-                <Button
-                  size="sm"
-                  className="gap-1.5 px-4"
-                  disabled={!editName.trim() || editName.trim() === (user?.name ?? "") || savingName}
-                  onClick={handleSaveName}
-                >
-                  {savingName ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : savedName ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : null}
-                  {savedName ? "Guardado" : "Guardar"}
-                </Button>
-              </div>
-            </motion.div>
-
-            {/* Title */}
-            <motion.div {...stagger(2)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-              <label className="text-sm font-semibold text-card-foreground">Título</label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Un encabezado breve que aparecerá bajo tu nombre (máximo 60 caracteres).
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  maxLength={60}
-                  placeholder="Ej: Diseñador gráfico"
-                  className="flex-1 rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm text-card-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-                />
-                <Button
-                  size="sm"
-                  className="gap-1.5 px-4"
-                  disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
-                  onClick={handleSaveTitle}
-                >
-                  {savingTitle ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : savedTitle ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : null}
-                  {savedTitle ? "Guardado" : "Guardar"}
-                </Button>
-              </div>
-            </motion.div>
-
-            {/* Bio */}
-            <motion.div {...stagger(3)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-              <label className="text-sm font-semibold text-card-foreground">Descripción</label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Cuéntale a la comunidad quién eres (máximo 200 caracteres).
-              </p>
-              <div className="mt-3">
-                <textarea
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  maxLength={200}
-                  rows={3}
-                  placeholder="Escribe algo sobre ti…"
-                  className="w-full resize-none rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm text-card-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-                />
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground tabular-nums">
-                    {editBio.length}/200
-                  </span>
-                  <Button
-                    size="sm"
-                    className="gap-1.5 px-4"
-                    disabled={editBio === ((currentUser as any)?.bio ?? "") || savingBio}
-                    onClick={handleSaveBio}
-                  >
-                    {savingBio ? (
-                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    ) : savedBio ? (
-                      <Check className="h-3.5 w-3.5" />
-                    ) : null}
-                    {savedBio ? "Guardado" : "Guardar"}
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        ) : (
-          /* ═══════════════════ VIEW MODE ═══════════════════ */
-          <motion.div
-            key="view"
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 16 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            {/* Avatar + Name + Title */}
-            <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
-              <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-24 w-24 border-2 border-border/50">
-                  {avatarUrl && (
-                    <AvatarImage src={avatarUrl} alt={user?.name ?? ""} />
-                  )}
-                  <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
-                    {user?.name ? getInitials(user.name) : <User className="h-10 w-10" />}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="text-center">
-                  <p className="text-lg font-bold text-card-foreground">
-                    {user?.name ?? "Sin nombre"}
-                  </p>
-                  {currentTitle && (
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {currentTitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Bio */}
-            {currentBio && (
-              <motion.div {...stagger(1)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-                <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  {currentBio}
-                </p>
-              </motion.div>
-            )}
-
-            {/* Sign out */}
-            <motion.div {...stagger(2)} className="mt-4">
-              <Button
-                variant="outline"
-                className="w-full gap-2 text-destructive hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30"
-                onClick={handleSignOut}
+      {/* Profile card — inline editable */}
+      <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <Avatar className="h-24 w-24 border-2 border-border/50">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.name ?? ""} />}
+              <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
+                {user?.name ? getInitials(user.name) : <User className="h-10 w-10" />}
+              </AvatarFallback>
+            </Avatar>
+            {editing && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={savingAvatar}
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
               >
-                <LogOut className="h-4 w-4" />
-                Cerrar sesión
+                {savingAvatar ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Camera className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+          </div>
+
+          {/* Name */}
+          {editing ? (
+            <div className="flex w-full max-w-xs items-center gap-2">
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                maxLength={40}
+                placeholder="Tu nombre"
+                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              />
+              <button
+                type="button"
+                onClick={handleSaveName}
+                disabled={!editName.trim() || editName.trim() === (user?.name ?? "") || savingName}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+              >
+                {savingName ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          ) : (
+            <p className="text-lg font-bold text-card-foreground">{user?.name ?? "Sin nombre"}</p>
+          )}
+
+          {/* Title */}
+          {editing ? (
+            <div className="flex w-full max-w-xs items-center gap-2">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={60}
+                placeholder="Título (opcional)"
+                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              />
+              <button
+                type="button"
+                onClick={handleSaveTitle}
+                disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+              >
+                {savingTitle ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          ) : (
+            currentTitle && <p className="text-sm text-muted-foreground">{currentTitle}</p>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Bio — inline editable */}
+      <motion.div {...stagger(1)} className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
+          {editing && <Pencil className="h-3 w-3 text-muted-foreground" />}
+        </div>
+        {editing ? (
+          <div className="mt-3">
+            <textarea
+              value={editBio}
+              onChange={(e) => setEditBio(e.target.value)}
+              maxLength={200}
+              rows={3}
+              placeholder="Escribe algo sobre ti…"
+              className="w-full resize-none rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            />
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[11px] text-muted-foreground tabular-nums">{editBio.length}/200</span>
+              <Button
+                size="sm"
+                className="gap-1.5 px-4"
+                disabled={editBio === ((currentUser as any)?.bio ?? "") || savingBio}
+                onClick={handleSaveBio}
+              >
+                {savingBio ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : savedBio ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : null}
+                {savedBio ? "Guardado" : "Guardar"}
               </Button>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
+        ) : currentBio ? (
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{currentBio}</p>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground/50 italic">Sin descripción</p>
         )}
-      </AnimatePresence>
+      </motion.div>
+
+      {/* Sign out */}
+      <motion.div {...stagger(2)} className="mt-4">
+        <Button
+          variant="outline"
+          className="w-full gap-2 text-destructive hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30"
+          onClick={() => signOut()}
+        >
+          <LogOut className="h-4 w-4" />
+          Cerrar sesión
+        </Button>
+      </motion.div>
+
+      {/* User's own posts */}
+      {userPosts && userPosts.length > 0 && (
+        <motion.div {...stagger(3)} className="mt-8">
+          <p className="mb-3 text-xs font-semibold text-muted-foreground">Mis publicaciones</p>
+          <div className="flex flex-col gap-4">
+            {userPosts.map((post, idx) => (
+              <div key={post._id} className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
+                {post.title && <p className="mb-1 text-sm font-bold text-card-foreground">{post.title}</p>}
+                <div className="text-[15px] leading-relaxed text-card-foreground" dangerouslySetInnerHTML={{ __html: post.content || "" }} />
+                {post.mediaUrls && post.mediaUrls.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {post.mediaUrls.map((m, i) =>
+                      m.type === "video" ? (
+                        <video key={i} src={m.url} className="h-28 w-full rounded-xl object-cover" controls muted />
+                      ) : (
+                        <img key={i} src={m.url} alt="" className="h-28 w-full rounded-xl object-cover" />
+                      ),
+                    )}
+                  </div>
+                )}
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  {post.likes} me gusta · {post.favorites} favoritos
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

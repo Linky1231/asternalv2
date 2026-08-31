@@ -357,3 +357,92 @@ export const toggleFavorite = mutation({
     }
   },
 });
+
+/**
+ * Get posts by a specific user for profile view.
+ */
+export const getUserPosts = query({
+  args: {
+    authorId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const posts = await ctx.db
+      .query("posts")
+      .collect();
+
+    const filtered = posts
+      .filter((p) => p.authorId === args.authorId)
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    const currentUserId = await getAuthUserId(ctx);
+
+    return await Promise.all(
+      filtered.map(async (post) => {
+        const author = await ctx.db.get(post.authorId);
+        const mediaUrls = post.media
+          ? await Promise.all(
+              post.media.map(async (m) => ({
+                url: (await ctx.storage.getUrl(m.storageId)) ?? "",
+                type: m.type,
+                mime: m.mime ?? undefined,
+              })),
+            )
+          : [];
+        const documentUrls = post.documents
+          ? await Promise.all(
+              post.documents.map(async (d) => ({
+                url: (await ctx.storage.getUrl(d.storageId)) ?? "",
+                name: d.name,
+                size: d.size,
+                mime: d.mime ?? undefined,
+              })),
+            )
+          : [];
+        let authorImageUrl: string | undefined;
+        if (author?.image) {
+          authorImageUrl = (await ctx.storage.getUrl(author.image)) ?? undefined;
+        }
+        let likedByMe = false;
+        let favoritedByMe = false;
+        if (currentUserId) {
+          const like = await ctx.db
+            .query("likes")
+            .withIndex("by_user_post", (q) =>
+              q.eq("userId", currentUserId).eq("postId", post._id),
+            )
+            .first();
+          likedByMe = !!like;
+          const fav = await ctx.db
+            .query("favorites")
+            .withIndex("by_user_post", (q) =>
+              q.eq("userId", currentUserId).eq("postId", post._id),
+            )
+            .first();
+          favoritedByMe = !!fav;
+        }
+        const authorTitle = (author as any)?.title ?? undefined;
+        const authorBio = (author as any)?.bio ?? undefined;
+        return {
+          _id: post._id,
+          authorId: post.authorId,
+          title: post.title,
+          content: post.content,
+          createdAt: post.createdAt,
+          likes: post.likes,
+          favorites: post.favorites,
+          shares: post.shares,
+          mediaUrls,
+          documentUrls,
+          authorName: author?.name ?? "Anónimo",
+          authorImageUrl,
+          authorTitle,
+          authorBio,
+          likedByMe,
+          favoritedByMe,
+          mentions: post.mentions ?? [],
+          hashtags: post.hashtags ?? [],
+        };
+      }),
+    );
+  },
+});

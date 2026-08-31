@@ -55,7 +55,7 @@ export const list = query({
       // Score and sort by popularity
       const scored = allPosts.map((p) => ({
         ...p,
-        score: p.likes * 2 + (p.shares ?? 0) * 4 + (p.favorites ?? 0) * 3,
+        score: p.likes * 2 + (p.shares ?? 0) * 4 + (p.favorites ?? 0) * 3 + (p.hashtags?.length ?? 0) * 1.5,
       }));
       scored.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
@@ -74,6 +74,8 @@ export const list = query({
       const scored = allPosts.map((p) => {
         const baseScore =
           p.likes * 2 + (p.shares ?? 0) * 4 + (p.favorites ?? 0) * 3;
+        // Hashtag bonus: posts with hashtags get a small boost
+        const hashtagBonus = (p.hashtags?.length ?? 0) * 1.5;
         // Recency boost: posts < 24h old get a multiplier
         const ageHours = (now - p.createdAt) / (1000 * 60 * 60);
         const recencyBoost = ageHours < 24 ? 1.5 : ageHours < 72 ? 1.2 : 1.0;
@@ -81,7 +83,7 @@ export const list = query({
         const jitter = 0.8 + Math.random() * 0.4;
         return {
           ...p,
-          score: baseScore * recencyBoost * jitter,
+          score: (baseScore + hashtagBonus) * recencyBoost * jitter,
         };
       });
       scored.sort((a, b) => b.score - a.score);
@@ -128,16 +130,30 @@ export const list = query({
           favoritedByMe = existing !== null;
         }
 
+        // Get document URLs
+        const documentUrls = post.documents
+          ? await Promise.all(
+              post.documents.map(async (d: { storageId: string; name: string; size: number; mime?: string }) => ({
+                url: (await ctx.storage.getUrl(d.storageId)) ?? "",
+                name: d.name,
+                size: d.size,
+                mime: d.mime ?? undefined,
+              })),
+            )
+          : [];
+
         return {
           ...post,
           authorName: author?.name ?? "Anónimo",
           authorImage: author?.image,
           mediaUrls,
+          documentUrls,
           likedByMe,
           favoritedByMe: favoritedByMe,
           mentions: post.mentions ?? [],
           title: post.title ?? undefined,
           favorites: post.favorites,
+          hashtags: post.hashtags ?? [],
         };
       }),
     );
@@ -168,6 +184,16 @@ export const create = mutation({
         }),
       ),
     ),
+    documents: v.optional(
+      v.array(
+        v.object({
+          storageId: v.string(),
+          name: v.string(),
+          size: v.number(),
+          mime: v.optional(v.string()),
+        }),
+      ),
+    ),
     mentions: v.optional(
       v.array(v.object({ userId: v.string(), name: v.string() })),
     ),
@@ -178,7 +204,8 @@ export const create = mutation({
 
     if (
       args.content.trim().length === 0 &&
-      (!args.media || args.media.length === 0)
+      (!args.media || args.media.length === 0) &&
+      (!args.documents || args.documents.length === 0)
     ) {
       throw new Error("La publicación no puede estar vacía");
     }
@@ -191,6 +218,17 @@ export const create = mutation({
       throw new Error("Máximo 10 archivos multimedia por publicación");
     }
 
+    if (args.documents && args.documents.length > 5) {
+      throw new Error("Máximo 5 documentos por publicación");
+    }
+
+    // Extract hashtags from content
+    const textContent = args.content.replace(/<[^>]*>/g, "");
+    const hashtagMatches = textContent.match(/#[\w\u00C0-\u024F]+/g);
+    const hashtags = hashtagMatches
+      ? [...new Set(hashtagMatches.map((h) => h.toLowerCase()))]
+      : undefined;
+
     await ctx.db.insert("posts", {
       authorId: userId,
       title: args.title?.trim() || undefined,
@@ -200,7 +238,9 @@ export const create = mutation({
       favorites: 0,
       shares: 0,
       media: args.media && args.media.length > 0 ? args.media : undefined,
+      documents: args.documents && args.documents.length > 0 ? args.documents : undefined,
       mentions: args.mentions && args.mentions.length > 0 ? args.mentions : undefined,
+      hashtags,
     });
   },
 });
@@ -268,6 +308,13 @@ export const remove = mutation({
     if (post.media) {
       for (const m of post.media) {
         await ctx.storage.delete(m.storageId);
+      }
+    }
+
+    // Delete associated documents from storage
+    if ((post as any).documents) {
+      for (const d of (post as any).documents) {
+        await ctx.storage.delete(d.storageId);
       }
     }
 

@@ -45,6 +45,16 @@ const schema = defineSchema(
           }),
         ),
       ),
+      documents: v.optional(
+        v.array(
+          v.object({
+            storageId: v.string(),
+            name: v.string(),
+            size: v.number(),
+            mime: v.optional(v.string()),
+          }),
+        ),
+      ),
       mentions: v.optional(
         v.array(
           v.object({
@@ -53,6 +63,7 @@ const schema = defineSchema(
           }),
         ),
       ),
+      hashtags: v.optional(v.array(v.string())),
     }).index("by_created", ["createdAt"]),
 
     likes: defineTable({

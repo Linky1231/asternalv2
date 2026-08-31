@@ -22,6 +22,8 @@ import {
   Star,
   Share2,
   UserX,
+  FileText,
+  Paperclip,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,7 +33,12 @@ const ACCEPTED_IMAGE =
   "image/jpeg,image/png,image/gif,image/webp,image/bmp,image/svg+xml";
 const ACCEPTED_VIDEO =
   "video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska,video/x-flv,video/3gpp,video/mpeg,video/ogg,video/*";
-const ACCEPTED_ALL = `${ACCEPTED_IMAGE},${ACCEPTED_VIDEO}`;
+const ACCEPTED_DOC =
+  "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip,application/x-rar-compressed,application/json";
+const ACCEPTED_ALL = `${ACCEPTED_IMAGE},${ACCEPTED_VIDEO},${ACCEPTED_DOC}`;
+const ACCEPTED_DOCS_ONLY = ACCEPTED_DOC;
+const MAX_DOCS = 5;
+const MAX_DOC_MB = 25;
 const MAX_FILES = 10;
 const MAX_IMAGE_MB = 10;
 const MAX_VIDEO_MB = 50;
@@ -89,6 +96,28 @@ interface PostMention {
   name: string;
 }
 
+interface PendingDoc {
+  id: string;
+  file: File;
+  name: string;
+  size: number;
+  extension: string;
+}
+
+interface UploadedDoc {
+  storageId: string;
+  name: string;
+  size: number;
+  mime?: string;
+}
+
+interface DocumentUrl {
+  url: string;
+  name: string;
+  size: number;
+  mime?: string;
+}
+
 // ── Utilities ──────────────────────────────────────────────────────
 function formatTime(timestamp: number) {
   const diff = Date.now() - timestamp;
@@ -137,6 +166,8 @@ function sanitizePostHtml(html: string): string {
         Array.from(node.childNodes).forEach(walk);
         return;
       }
+      // Convert text nodes with hashtags to styled spans
+      if (node.nodeType === Node.TEXT_NODE) return;
       const text = node.textContent || "";
       const t = document.createTextNode(text);
       node.parentNode?.replaceChild(t, node);
@@ -144,7 +175,13 @@ function sanitizePostHtml(html: string): string {
     }
   };
   Array.from(tmp.childNodes).forEach(walk);
-  return tmp.innerHTML;
+
+  // Post-process: wrap #hashtags in styled spans
+  const result = tmp.innerHTML;
+  return result.replace(
+    /(#[\w\u00C0-\u00FF\u0100-\u024F]+)/g,
+    '<span class="hashtag">$1</span>'
+  );
 }
 
 // ── Aspect ratio detection hook ───────────────────────────────────
@@ -1115,6 +1152,8 @@ function PostCard({
     favoritedByMe: boolean;
     authorName: string;
     mediaUrls: LightboxItem[];
+    documentUrls: DocumentUrl[];
+    hashtags: string[];
   };
   currentUserId?: string;
   onToggleLike: (postId: string) => void;
@@ -1161,12 +1200,11 @@ function PostCard({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.92 }}
-                  whileHover={{ scale: 1.03 }}
                   onClick={() => isFollowingUser ? onRequestUnfollow(post.authorId, post.authorName) : onFollow(post.authorId)}
-                  className={`ml-auto text-xs font-semibold px-3.5 py-1 rounded-full ${
+                  className={`ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-md border transition-colors ${
                     isFollowingUser
-                      ? "bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      : "bg-primary text-primary-foreground shadow-sm shadow-primary/20 hover:bg-primary/90"
+                      ? "border-border/60 text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
+                      : "border-primary/30 text-primary hover:bg-primary/5"
                   }`}
                 >
                   {isFollowingUser ? "Siguiendo" : "Seguir"}
@@ -1195,24 +1233,57 @@ function PostCard({
           onOpenLightbox={(i) => onOpenLightbox(post.mediaUrls, i)}
         />
       )}
+      {/* Documents */}
+      {post.documentUrls && post.documentUrls.length > 0 && (
+        <div className="px-4 pb-3 sm:px-5">
+          <div className="flex flex-col gap-2">
+            {post.documentUrls.map((doc, i) => {
+              const ext = doc.name.split(".").pop()?.toUpperCase() ?? "FILE";
+              const sizeStr = doc.size < 1024
+                ? `${doc.size} B`
+                : doc.size < 1024 * 1024
+                  ? `${(doc.size / 1024).toFixed(1)} KB`
+                  : `${(doc.size / (1024 * 1024)).toFixed(1)} MB`;
+              return (
+                <a
+                  key={i}
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="doc-attachment"
+                >
+                  <div className="doc-icon">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="doc-info">
+                    <div className="doc-name">{doc.name}</div>
+                    <div className="doc-meta">{sizeStr}</div>
+                  </div>
+                  <span className="doc-ext">{ext}</span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="px-4 pb-3 pt-3 sm:px-5">
-        <div className="flex items-center gap-4 sm:gap-5">
+        <div className="flex items-center gap-2 sm:gap-3">
           <motion.button
             type="button"
             whileTap={{ scale: 0.85 }}
             transition={{ type: "spring", stiffness: 800, damping: 20 }}
             onClick={() => onToggleLike(post._id)}
-            className={`flex items-center gap-1.5 text-xs transition-colors duration-150 ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
               post.likedByMe
-                ? "text-primary"
-                : "text-muted-foreground hover:text-primary/70"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
             <motion.span
               key={`${post.likedByMe}-${post._id}`}
               animate={post.likedByMe ? { scale: [1, 1.3, 1] } : { scale: 1 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="flex items-center gap-1"
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex items-center"
             >
               <Heart
                 className={`h-4 w-4 transition-all duration-150 ease-out ${
@@ -1222,19 +1293,18 @@ function PostCard({
                 }`}
               />
             </motion.span>
-            <span className="tabular-nums">{post.likes > 0 ? post.likes : ""}</span>
+            <span className="tabular-nums">{post.likes > 0 ? post.likes : "Me gusta"}</span>
           </motion.button>
           {/* Favorites */}
           <motion.button
             type="button"
-            whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.85 }}
             transition={{ type: "spring", stiffness: 600, damping: 15 }}
             onClick={() => onToggleFavorite(post._id)}
-            className={`flex items-center gap-1 text-xs transition-colors ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               post.favoritedByMe
-                ? "text-yellow-500"
-                : "text-muted-foreground hover:text-yellow-500"
+                ? "bg-yellow-500/10 text-yellow-600"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
             <motion.span
@@ -1249,23 +1319,22 @@ function PostCard({
           {/* Share */}
           <motion.button
             type="button"
-            whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.85 }}
             transition={{ type: "spring", stiffness: 600, damping: 15 }}
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Share2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Compartir</span>
           </motion.button>
           {currentUserId === post.authorId && (
             <motion.button
               type="button"
-              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.9 }}
               transition={{ type: "spring", stiffness: 600, damping: 15 }}
               onClick={() => onRequestDelete(post._id)}
-              className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
+              className="ml-auto rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              <Trash2 className="h-3.5 w-3.5" />
             </motion.button>
           )}
         </div>
@@ -1621,9 +1690,11 @@ export default function Dashboard() {
   const [content, setContent] = useState("");
   const [postTitle, setPostTitle] = useState("");
   const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
+  const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const [lightbox, setLightbox] = useState<{
     items: LightboxItem[];
@@ -1846,6 +1917,31 @@ export default function Dashboard() {
         }
       }
 
+      // Upload documents
+      const uploadedDocs: UploadedDoc[] = [];
+      for (const doc of pendingDocs) {
+        let docError = "";
+        for (let attempt = 0; attempt <= 2; attempt++) {
+          try {
+            const url = await generateUploadUrl();
+            const result = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": doc.file.type || "application/octet-stream" },
+              body: doc.file,
+            });
+            if (!result.ok) { docError = `HTTP ${result.status}`; if (attempt < 2) continue; break; }
+            const json = await result.json();
+            if (json.storageId) {
+              uploadedDocs.push({ storageId: json.storageId, name: doc.name, size: doc.size, mime: doc.file.type || undefined });
+              break;
+            }
+          } catch (e) {
+            docError = e instanceof Error ? e.message : "Error de red";
+            if (attempt < 2) continue;
+          }
+        }
+      }
+
       // Send HTML content (or empty string if no text)
       const contentToSend = textOnly ? html.trim() : "";
       await createPost({
@@ -1853,12 +1949,15 @@ export default function Dashboard() {
         content: contentToSend,
         media:
           uploaded.length > 0 ? (uploaded as any) : undefined,
+        documents:
+          uploadedDocs.length > 0 ? (uploadedDocs as any) : undefined,
         mentions:
           pendingMentions.length > 0 ? (pendingMentions as any) : undefined,
       });
 
       pendingMedia.forEach((pm) => URL.revokeObjectURL(pm.preview));
       setPendingMedia([]);
+      setPendingDocs([]);
       setPendingMentions([]);
       setContent("");
       setPostTitle("");
@@ -1910,9 +2009,34 @@ export default function Dashboard() {
   const openLightbox = (items: LightboxItem[], index: number) =>
     setLightbox({ items, index });
 
+  const handleDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const arr = Array.from(e.target.files);
+    const remaining = MAX_DOCS - pendingDocs.length;
+    const newDocs: PendingDoc[] = arr.slice(0, remaining).filter(file => {
+      if (file.size > MAX_DOC_MB * 1024 * 1024) {
+        console.warn(`El archivo ${file.name} supera ${MAX_DOC_MB}MB`);
+        return false;
+      }
+      return true;
+    }).map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      file,
+      name: file.name,
+      size: file.size,
+      extension: file.name.split(".").pop()?.toUpperCase() ?? "FILE",
+    }));
+    setPendingDocs(prev => [...prev, ...newDocs]);
+    e.target.value = "";
+  };
+
+  const removePendingDoc = useCallback((id: string) => {
+    setPendingDocs(prev => prev.filter(d => d.id !== id));
+  }, []);
+
   const hasText =
     editorRef.current?.textContent?.trim().length ?? content.trim().length > 0;
-  const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0;
+  const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0 || pendingDocs.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -2054,19 +2178,59 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* Document previews */}
+              {pendingDocs.length > 0 && (
+                <div className="mt-3 flex flex-col gap-2">
+                  {pendingDocs.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="group flex items-center gap-3 rounded-xl border border-border/40 bg-muted/30 px-3 py-2.5"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs font-medium text-card-foreground">{doc.name}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {doc.size < 1024 ? `${doc.size} B` : doc.size < 1048576 ? `${(doc.size / 1024).toFixed(1)} KB` : `${(doc.size / 1048576).toFixed(1)} MB`}
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                        {doc.extension}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removePendingDoc(doc.id)}
+                        className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Separator */}
               <div className="mt-5 border-t border-border/40" />
 
               {/* Actions row */}
               <div className="mt-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept={ACCEPTED_ALL}
+                    accept={`${ACCEPTED_IMAGE},${ACCEPTED_VIDEO}`}
                     multiple
                     className="hidden"
                     onChange={handleFileChange}
+                  />
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept={ACCEPTED_DOCS_ONLY}
+                    multiple
+                    className="hidden"
+                    onChange={handleDocChange}
                   />
                   <Button
                     type="button"
@@ -2078,11 +2242,23 @@ export default function Dashboard() {
                     disabled={pendingMedia.length >= MAX_FILES}
                   >
                     <ImagePlus className="h-4 w-4" />
-                    <span className="text-xs">Adjuntar</span>
+                    <span className="text-xs hidden sm:inline">Foto/Video</span>
                   </Button>
-                  {pendingMedia.length > 0 && (
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      {pendingMedia.length}/{MAX_FILES}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-primary"
+                    onClick={() => docInputRef.current?.click()}
+                    title="Añadir documento"
+                    disabled={pendingDocs.length >= MAX_DOCS}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                    <span className="text-xs hidden sm:inline">Documento</span>
+                  </Button>
+                  {(pendingMedia.length > 0 || pendingDocs.length > 0) && (
+                    <span className="ml-1 text-[11px] text-muted-foreground tabular-nums">
+                      {pendingMedia.length + pendingDocs.length}
                     </span>
                   )}
                 </div>
@@ -2178,7 +2354,11 @@ export default function Dashboard() {
               posts.map((post, idx) => (
                 <PostCard
                   key={post._id}
-                  post={post}
+                  post={{
+                    ...post,
+                    documentUrls: (post as any).documentUrls ?? [],
+                    hashtags: (post as any).hashtags ?? [],
+                  }}
                   currentUserId={user?._id}
                   onToggleLike={handleToggleLike}
                   onToggleFavorite={handleToggleFavorite}

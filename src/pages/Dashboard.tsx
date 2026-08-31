@@ -21,6 +21,7 @@ import {
   Search,
   Star,
   Share2,
+  UserX,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -479,6 +480,68 @@ function DeleteConfirmDialog({
                 className="gap-1.5"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ── Unfollow confirmation dialog ────────────────────────────────────
+function UnfollowConfirmDialog({
+  open,
+  userName,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  userName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 8 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="mx-4 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                <UserX className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">Dejar de seguir</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  ¿Dejar de seguir a <span className="font-medium text-foreground">{userName}</span>?
+                  Sus publicaciones dejarán de aparecer en tu pestaña "Seguidos".
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={onCancel}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onConfirm}
+                className="gap-1.5"
+              >
+                Dejar de seguir
               </Button>
             </div>
           </motion.div>
@@ -1033,7 +1096,8 @@ function PostCard({
   currentUserId,
   onToggleLike,
   onToggleFavorite,
-  onToggleFollow,
+  onFollow,
+  onRequestUnfollow,
   onRequestDelete,
   onOpenLightbox,
   onOpenComments,
@@ -1055,7 +1119,8 @@ function PostCard({
   currentUserId?: string;
   onToggleLike: (postId: string) => void;
   onToggleFavorite: (postId: string) => void;
-  onToggleFollow: (userId: string) => void;
+  onFollow: (userId: string) => void;
+  onRequestUnfollow: (userId: string, name: string) => void;
   onRequestDelete: (postId: string) => void;
   onOpenLightbox: (media: LightboxItem[], index: number) => void;
   onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[]; postNumber: number }) => void;
@@ -1095,7 +1160,7 @@ function PostCard({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => onToggleFollow(post.authorId)}
+                  onClick={() => isFollowingUser ? onRequestUnfollow(post.authorId, post.authorName) : onFollow(post.authorId)}
                   className={`ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors ${
                     isFollowingUser
                       ? "bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -1563,6 +1628,7 @@ export default function Dashboard() {
     index: number;
   } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [unfollowTarget, setUnfollowTarget] = useState<{ userId: string; name: string } | null>(null);
   const [commentsModalPost, setCommentsModalPost] = useState<{
     _id: string;
     authorId: string;
@@ -1826,6 +1892,15 @@ export default function Dashboard() {
     }
     setDeleteTarget(null);
   };
+  const handleConfirmUnfollow = async () => {
+    if (!unfollowTarget) return;
+    try {
+      await toggleFollowMutation({ userId: unfollowTarget.userId as any });
+    } catch (err) {
+      console.error("Error al dejar de seguir:", err);
+    }
+    setUnfollowTarget(null);
+  };
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
@@ -2059,15 +2134,46 @@ export default function Dashboard() {
               ))
             ) : posts.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="rounded-2xl border border-dashed border-border/60 py-16 text-center"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="rounded-2xl border border-border/40 bg-card/50 py-14 px-6 text-center"
               >
-                <img src="/assets/67385.png" alt="Asternal" className="mx-auto h-8 w-8 rounded-lg object-contain opacity-40" />
-                <p className="mt-3 text-sm text-muted-foreground">
-                  No hay publicaciones todavía. ¡Sé el primero en compartir
-                  algo!
-                </p>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                </div>
+                {activeTab === "forYou" && (
+                  <>
+                    <p className="text-sm font-medium text-foreground">
+                      No hay publicaciones para ti
+                    </p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Cuando haya publicaciones nuevas, aparecerán aquí.
+                    </p>
+                  </>
+                )}
+                {activeTab === "following" && (
+                  <>
+                    <p className="text-sm font-medium text-foreground">
+                      No hay publicaciones de tus seguidos
+                    </p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Sigue a otras personas para ver sus publicaciones aquí.
+                    </p>
+                  </>
+                )}
+                {activeTab === "popular" && (
+                  <>
+                    <p className="text-sm font-medium text-foreground">
+                      No hay publicaciones populares aún
+                    </p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Las publicaciones con más interacciones aparecerán aquí.
+                    </p>
+                  </>
+                )}
               </motion.div>
             ) : (
               posts.map((post, idx) => (
@@ -2077,7 +2183,8 @@ export default function Dashboard() {
                   currentUserId={user?._id}
                   onToggleLike={handleToggleLike}
                   onToggleFavorite={handleToggleFavorite}
-                  onToggleFollow={(userId) => toggleFollowMutation({ userId: userId as any })}
+                  onFollow={(userId) => toggleFollowMutation({ userId: userId as any })}
+                  onRequestUnfollow={(userId, name) => setUnfollowTarget({ userId, name })}
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}
                   onOpenComments={setCommentsModalPost}
@@ -2129,6 +2236,14 @@ export default function Dashboard() {
         open={deleteTarget !== null}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Unfollow dialog */}
+      <UnfollowConfirmDialog
+        open={unfollowTarget !== null}
+        userName={unfollowTarget?.name ?? ""}
+        onConfirm={handleConfirmUnfollow}
+        onCancel={() => setUnfollowTarget(null)}
       />
     </div>
   );

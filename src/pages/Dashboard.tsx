@@ -2072,7 +2072,7 @@ export default function Dashboard() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               className={`relative flex-1 py-3 text-center text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? "text-primary"
@@ -2084,7 +2084,7 @@ export default function Dashboard() {
                 <motion.div
                   layoutId="activeTab"
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  transition={{ type: "spring", stiffness: 600, damping: 40 }}
                 />
               )}
             </button>
@@ -2288,7 +2288,7 @@ export default function Dashboard() {
 
         {/* Feed */}
         <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
-          <AnimatePresence mode="popLayout" initial={false}>
+          <AnimatePresence mode="wait" initial={false}>
             {posts === undefined ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div
@@ -2351,7 +2351,15 @@ export default function Dashboard() {
                 )}
               </motion.div>
             ) : (
-              posts.map((post, idx) => (
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col gap-4 sm:gap-5"
+              >
+              {posts.map((post, idx) => (
                 <PostCard
                   key={post._id}
                   post={{
@@ -2369,7 +2377,8 @@ export default function Dashboard() {
                   onOpenComments={setCommentsModalPost}
                   postNumber={posts.length - idx}
                 />
-              ))
+              ))}
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

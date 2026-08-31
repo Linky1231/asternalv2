@@ -1675,7 +1675,7 @@ function CommentsModal({
 const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
   { id: "forYou", label: "Para ti" },
   { id: "following", label: "Seguidos" },
-  { id: "popular", label: "Populares" },
+  { id: "popular", label: "Tendencias" },
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2266,33 +2266,39 @@ export default function Dashboard() {
               {/* Formatting toolbar */}
               <FormatToolbar />
 
-              {/* Tabs — below composer */}
-              <div className="mt-4 border-t border-border/40">
-                <div className="flex">
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                      className={`relative flex-1 py-2.5 text-center text-xs font-semibold transition-colors ${
-                        activeTab === tab.id
-                          ? "text-primary"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab.label}
-                      {activeTab === tab.id && (
-                        <motion.div
-                          layoutId="activeTab"
-                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                          transition={{ type: "spring", stiffness: 600, damping: 40 }}
-                        />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
+          </div>
+        </motion.div>
+
+        {/* ── Feed Tabs ──────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
+          className="mt-4 rounded-2xl border border-border/60 bg-card"
+        >
+          <div className="flex">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                className={`relative flex-1 py-3 text-center text-xs font-semibold transition-colors ${
+                  activeTab === tab.id
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                    transition={{ type: "spring", stiffness: 600, damping: 40 }}
+                  />
+                )}
+              </button>
+            ))}
           </div>
         </motion.div>
 
@@ -2334,7 +2340,7 @@ export default function Dashboard() {
                 {activeTab === "popular" && (
                   <>
                     <p className="text-sm font-medium text-foreground">
-                      No hay publicaciones populares aún
+                      No hay tendencias aún
                     </p>
                     <p className="mt-1.5 text-xs text-muted-foreground">
                       Las publicaciones con más interacciones aparecerán aquí.

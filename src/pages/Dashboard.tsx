@@ -773,6 +773,7 @@ function FormatToolbar() {
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRange = useRef<Range | null>(null);
+  const [activeSize, setActiveSize] = useState<string>("");
 
   const hasSelection = () => {
     const sel = window.getSelection();
@@ -836,6 +837,20 @@ function FormatToolbar() {
             if (showSizes) { setShowSizes(false); return; }
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
             saveSelection();
+            // Detect current size from selection
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+              const node = sel.getRangeAt(0).startContainer;
+              const el = node instanceof HTMLElement ? node : node.parentElement;
+              if (el) {
+                const computed = window.getComputedStyle(el);
+                const fs = computed.fontSize;
+                if (fs === "24px") setActiveSize("24px");
+                else if (fs === "20px") setActiveSize("20px");
+                else if (fs === "17px") setActiveSize("17px");
+                else setActiveSize("");
+              }
+            }
             setShowSizes(true);
           }}
           title="Tamaño del texto"
@@ -951,9 +966,7 @@ function FormatToolbar() {
               <div className="flex gap-1">
                 {HEADING_SIZES.map((s) => {
                   const isDefault = !s.value;
-                  const isActive = isDefault
-                    ? !selectionHasStyle("fontSize", "24px") && !selectionHasStyle("fontSize", "20px") && !selectionHasStyle("fontSize", "17px")
-                    : selectionHasStyle("fontSize", s.value);
+                  const isActive = activeSize === s.value;
                   return (
                     <button
                       key={s.label}
@@ -966,6 +979,7 @@ function FormatToolbar() {
                         if (!isDefault) {
                           applyStyleToSelection("fontSize", s.value);
                         }
+                        setActiveSize(s.value);
                         setShowSizes(false);
                       }}
                     >
@@ -1739,7 +1753,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
         {userData ? (
           <div>
             {/* Profile card + bio + separator + posts — all appear together */}
-            <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 outline-none">
+            <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8 outline-none" style={{ borderColor: "var(--border)" }}>
               <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-24 w-24 border-2 border-border/50 outline-none">
                   {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}

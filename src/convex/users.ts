@@ -242,44 +242,11 @@ export const deletePostAsAdmin = mutation({
 /**
  * Temporary: reset a user's role to user. Admin only.
  */
-export const resetRole = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, { role: "user" } as any);
-    return { success: true };
-  },
-});
 
 /**
  * Temporary: list all auth accounts to find emails.
  */
-export const listAuthEmails = query({
-  args: {},
-  handler: async (ctx) => {
-    const accounts = await ctx.db.query("authAccounts" as any).collect() as any[];
-    return accounts
-      .filter((a: any) => a.provider !== "anonymous")
-      .map((a: any) => ({
-        _id: a._id,
-        userId: a.userId,
-        provider: a.provider,
-        providerAccountId: a.providerAccountId,
-      }));
-  },
-});
 
-export const listAllUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
-    return users.map((u) => ({
-      _id: u._id,
-      name: u.name,
-      email: u.email,
-      role: (u as any).role,
-    }));
-  },
-});
 
 /**
  * Get the current user's role.

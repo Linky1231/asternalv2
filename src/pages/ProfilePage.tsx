@@ -272,9 +272,9 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               value={editBio}
               onChange={(e) => setEditBio(e.target.value)}
               maxLength={200}
-              rows={3}
+              rows={4}
               placeholder="Escribe algo sobre ti…"
-              className="w-full resize-none rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              className="w-full min-h-[120px] resize-none rounded-xl border border-border/60 bg-background px-4 py-3 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
             />
             <div className="mt-2 flex items-center justify-between">
               <span className="text-[11px] text-muted-foreground tabular-nums">{editBio.length}/200</span>

@@ -441,27 +441,24 @@ function Lightbox({
         className="flex max-h-[90vh] max-w-[90vw] items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="wait" initial={false}>
           {current.type === "video" ? (
             <motion.div
               key={`video-${index}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.2 }}
             >
               <LightboxVideo url={current.url} mime={current.mime} />
             </motion.div>
           ) : (
-            <motion.img
+            <img
               key={`img-${index}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
               src={current.url}
               alt="Tamaño completo"
               className="max-h-[88vh] max-w-[90vw] rounded-lg object-contain"
+              style={{ opacity: 1 }}
             />
           )}
         </AnimatePresence>
@@ -767,10 +764,28 @@ function FormatToolbar() {
   const [showSizes, setShowSizes] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedRange = useRef<Range | null>(null);
 
   const hasSelection = () => {
     const sel = window.getSelection();
     return sel && sel.rangeCount > 0 && !sel.isCollapsed;
+  };
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      savedRange.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const restoreSelection = () => {
+    if (savedRange.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRange.current);
+      }
+    }
   };
 
   const showHint = (msg: string) => {
@@ -794,6 +809,7 @@ function FormatToolbar() {
             setShowSizes(false);
             if (showColors) { setShowColors(false); return; }
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+            saveSelection();
             setShowColors(true);
           }}
           title="Color del texto"
@@ -811,6 +827,7 @@ function FormatToolbar() {
             setShowColors(false);
             if (showSizes) { setShowSizes(false); return; }
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+            saveSelection();
             setShowSizes(true);
           }}
           title="Tamaño del texto"
@@ -888,6 +905,7 @@ function FormatToolbar() {
                     style={{ backgroundColor: c.value || "var(--card-foreground)" }}
                     onMouseDown={(e) => {
                       e.preventDefault();
+                      restoreSelection();
                       if (selectionHasStyle("color", c.value)) {
                         removeStyleFromSelection("color");
                       } else if (c.value) {
@@ -935,6 +953,7 @@ function FormatToolbar() {
                       className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
                       onMouseDown={(e) => {
                         e.preventDefault();
+                        restoreSelection();
                         removeStyleFromSelection("fontSize");
                         if (!isDefault) {
                           applyStyleToSelection("fontSize", s.value);
@@ -1737,7 +1756,9 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
               </motion.div>
             )}
 
-            <p className="mt-8 mb-3 text-xs font-semibold text-muted-foreground">Publicaciones</p>
+            <div className="mt-8 mb-4 border-t border-border/40 pt-6">
+              <p className="text-xs font-semibold text-muted-foreground">Publicaciones</p>
+            </div>
             <div className="flex flex-col gap-4 pb-24">
               {(userPosts ?? []).length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">Este usuario no tiene publicaciones.</p>
@@ -2410,7 +2431,9 @@ export default function Dashboard() {
                 className="rounded-2xl border border-border/40 bg-card/50 py-14 px-6 text-center"
               >
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <MessageCircle className="h-6 w-6 text-primary" />
+                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6z" />
+                  </svg>
                 </div>
                 {activeTab === "forYou" && (
                   <>

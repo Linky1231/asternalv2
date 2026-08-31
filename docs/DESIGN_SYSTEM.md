@@ -160,6 +160,13 @@ La jerarquía de botones sigue un principio de **contraste decreciente** según 
 | **Pending media** | `AnimatePresence` | `scale: 0.9→1, opacity: 0→1` | Default |
 | **Mention list** | `AnimatePresence` | `x: -8→0, opacity: 0→1` stagger | Progressivo |
 
+### Skeletons / Loading
+
+Los skeleton loaders del feed usan `motion.div` con fade animado:
+- Entrada: `opacity: 0` → `1` con delay progresivo (`i * 0.05`)
+- Salida: `opacity: 0` via `AnimatePresence exit`
+- Esto evita el flash de carga momentánea al cambiar de pestaña o al cargar por primera vez.
+
 ### Scroll-to-top
 
 Al cambiar de pestaña, se ejecuta `window.scrollTo({ top: 0, behavior: "smooth" })` para volver al inicio de forma fluida.

@@ -2291,8 +2291,12 @@ export default function Dashboard() {
           <AnimatePresence mode="wait" initial={false}>
             {posts === undefined ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div
+                <motion.div
                   key={`skeleton-${i}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.05 }}
                   className="animate-pulse rounded-2xl border border-border/60 bg-card p-5"
                 >
                   <div className="flex items-start gap-3.5">
@@ -2305,7 +2309,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))
             ) : posts.length === 0 ? (
               <motion.div

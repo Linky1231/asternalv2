@@ -22,6 +22,7 @@ import {
   Search,
   Star,
   Share2,
+  MoreHorizontal,
   UserX,
   FileText,
   Paperclip,
@@ -32,6 +33,12 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ── Constants ──────────────────────────────────────────────────────
 const ACCEPTED_IMAGE =
@@ -355,17 +362,23 @@ function applyStyleToSelection(prop: string, value: string) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
   const range = sel.getRangeAt(0).cloneRange();
-  // Restore selection to ensure it's valid
-  sel.removeAllRanges();
-  sel.addRange(range);
+  const startC = range.startContainer;
+  const startO = range.startOffset;
+  const endC = range.endContainer;
+  const endO = range.endOffset;
   const fragment = range.extractContents();
-  // Remove any existing value of this property first
   removeStyleFromFragment(fragment, prop);
   const span = document.createElement("span");
   (span.style as any)[prop] = value;
   span.appendChild(fragment);
   range.insertNode(span);
-  sel.removeAllRanges();
+  try {
+    const nr = document.createRange();
+    nr.setStart(startC, startO);
+    nr.setEnd(endC, endO);
+    sel.removeAllRanges();
+    sel.addRange(nr);
+  } catch {}
 }
 
 /**
@@ -1949,15 +1962,26 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
             <ArrowLeft className="h-4 w-4" />
           </button>
           <span className="text-sm font-semibold">{userData?.authorName ?? "Perfil"}</span>
-          <div className="ml-auto flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => { /* Compartir perfil — funcionalidad pendiente */ }}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              title="Compartir perfil"
-            >
-              <Share2 className="h-4 w-4" />
-            </button>
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem
+                  onClick={() => { /* Compartir perfil — funcionalidad pendiente */ }}
+                  className="gap-2 text-sm"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Compartir perfil
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

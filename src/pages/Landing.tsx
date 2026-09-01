@@ -108,7 +108,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="border-t border-border/50 bg-muted/30 py-32">
+      <section className="relative border-t border-border/50 bg-muted/30 py-32">
         <div className="mx-auto max-w-6xl px-6">
           <motion.div
             className="text-center"
@@ -152,7 +152,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-32">
+      <section className="relative py-32">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <motion.div
             initial="hidden"

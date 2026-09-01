@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, Loader2, UserPlus, LogIn, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, LogIn, Eye, EyeOff } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -102,7 +102,19 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
     >
-      <div className="flex-1 flex items-center justify-center px-4">
+      {/* ── Back button ────────────────────────────── */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <div className="mx-auto flex h-14 max-w-2xl items-center px-4">
+          <button
+            onClick={() => navigate("/")}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center px-4 pt-14">
         <div className="w-full max-w-sm">
           {/* ── Logo & Brand ─────────────────────────── */}
           <motion.div
@@ -111,11 +123,13 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.32, 0.72, 0, 1] }}
           >
-            <img
-              src="/assets/67385.png"
-              alt="Asternal"
-              className="mx-auto h-14 w-14 rounded-2xl object-contain mb-4"
-            />
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/8">
+              <img
+                src="/assets/67385.png"
+                alt="Asternal"
+                className="h-14 w-14 rounded-2xl object-contain"
+              />
+            </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Asternal
             </h1>
@@ -130,7 +144,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
           >
-            <Card className="border-border/40 shadow-sm">
+            <Card className="border-border/40 shadow-md shadow-primary/5">
               <AnimatePresence mode="wait">
                 {mode === "login" ? (
                   <motion.div

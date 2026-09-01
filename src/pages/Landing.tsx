@@ -152,35 +152,6 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="relative py-32">
-        <div className="mx-auto max-w-3xl px-6 text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={fadeUp}
-            custom={0}
-          >
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              ¿Listo para subir de nivel?
-            </h2>
-            <p className="mt-5 text-lg text-muted-foreground">
-              Únete a Asternal y sé parte de algo más grande.
-            </p>
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} className="inline-block">
-              <Button
-                size="lg"
-                className="gap-2 px-10"
-                onClick={() => navigate("/auth")}
-              >
-                Comenzar gratis
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
       <footer className="border-t border-border/50 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

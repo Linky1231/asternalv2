@@ -314,6 +314,8 @@ function removeStyleFromSelection(prop: string) {
   const fragment = range.extractContents();
   removeStyleFromFragment(fragment, prop);
   range.insertNode(fragment);
+  // Collapse to end to avoid partial selection issues
+  range.collapse(false);
   // Restore selection after DOM modification
   sel.removeAllRanges();
   sel.addRange(range);
@@ -662,6 +664,7 @@ function FeedVideo({
 }) {
   const [videoError, setVideoError] = useState(false);
   const [aspectWarning, setAspectWarning] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const objUrl = useVideoObjectUrl(item.url, item.mime || "video/mp4");
 
   return (
@@ -672,7 +675,7 @@ function FeedVideo({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onClick();
       }}
-      className="group relative block w-full cursor-pointer bg-muted outline-none"
+      className="group relative block w-full cursor-pointer bg-muted outline-none overflow-hidden"
     >
       {!videoError && objUrl ? (
         <video
@@ -682,6 +685,7 @@ function FeedVideo({
           className="mx-auto block max-h-80 w-full object-contain"
           onError={() => setVideoError(true)}
           onLoadedMetadata={(e) => {
+            setVideoLoaded(true);
             const v = e.currentTarget;
             if (isNonOptimalAspect(v.videoWidth, v.videoHeight)) {
               setAspectWarning(true);
@@ -691,18 +695,24 @@ function FeedVideo({
         />
       ) : !objUrl ? (
         <div className="flex h-28 w-full items-center justify-center bg-muted">
-          <span className="text-xs text-muted-foreground">Cargando…</span>
+          <div className="flex flex-col items-center gap-2">
+            <Film className="h-6 w-6 text-muted-foreground/40" />
+            <span className="text-xs text-muted-foreground">Cargando vídeo…</span>
+          </div>
         </div>
       ) : (
         <div className="flex h-28 w-full items-center justify-center bg-muted">
           <Film className="h-8 w-8 text-muted-foreground/40" />
         </div>
       )}
-      <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm">
-          <Play className="ml-0.5 h-5 w-5" />
+      {/* Play button — only visible when video has loaded, NOT during loading */}
+      {videoLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/15 transition-colors group-hover:bg-black/25">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg transition-transform group-hover:scale-105">
+            <Play className="ml-0.5 h-5 w-5" />
+          </div>
         </div>
-      </div>
+      )}
       {aspectWarning && <DimensionBadge />}
     </div>
   );
@@ -1017,13 +1027,16 @@ function FormatToolbar() {
                         const nextSize = isDefault ? "" : s.value;
                         setActiveSize(nextSize);
                         setShowSizes(false);
-                        // Restore selection and apply after state update
+                        // Double-RAF: wait for React to commit DOM changes
+                        // before restoring selection and modifying styles
                         requestAnimationFrame(() => {
-                          restoreSelection();
-                          removeStyleFromSelection("fontSize");
-                          if (!isDefault) {
-                            applyStyleToSelection("fontSize", s.value);
-                          }
+                          requestAnimationFrame(() => {
+                            restoreSelection();
+                            removeStyleFromSelection("fontSize");
+                            if (!isDefault) {
+                              applyStyleToSelection("fontSize", s.value);
+                            }
+                          });
                         });
                       }}
                     >

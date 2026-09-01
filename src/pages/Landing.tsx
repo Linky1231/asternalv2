@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Code2, Cpu, Rocket, ChevronRight } from "lucide-react";
+import { Code2, Rocket, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
 
@@ -14,19 +14,14 @@ const fadeUp = {
 
 const features = [
   {
-    icon: Code2,
-    title: "Compila tu proyecto",
-    desc: "Publica builds, demos y work-in-progress. Recibe feedback técnico directo de otros desarrolladores.",
-  },
-  {
-    icon: Cpu,
-    title: "Arma tu equipo",
-    desc: "Encuentra programadores, artistas y diseñadores que buscan colaborar en proyectos reales.",
-  },
-  {
     icon: Rocket,
-    title: "Lanza tu juego",
-    desc: "Comparte tu proceso de desarrollo, documenta tu stack y conecta con la comunidad GameDev.",
+    title: "Un motor de juegos propio",
+    desc: "Haz realidad tus ideas y crea tus propios juegos.",
+  },
+  {
+    icon: Code2,
+    title: "Una red social integrada",
+    desc: "Comparte tus creaciones y conecta con otros desarrolladores.",
   },
 ];
 
@@ -65,9 +60,8 @@ export default function Landing() {
             variants={fadeUp}
             custom={1}
           >
-            Tu motor de{" "}
-            <span className="text-primary">juegos</span>{" "}
-            empieza aquí
+            Ser desarrollador{' '}
+            <span className="text-primary">nunca fue tan fácil</span>
           </motion.h1>
 
           <motion.p
@@ -77,8 +71,8 @@ export default function Landing() {
             variants={fadeUp}
             custom={2}
           >
-            Asternal es una plataforma para desarrolladores de videojuegos.
-            Publica tus proyectos, colabora con otros devs y construye tu próximo juego.
+            Una plataforma todo en uno para crear, aprender y crecer
+            como desarrollador de videojuegos.
           </motion.p>
 
           <motion.div
@@ -122,11 +116,11 @@ export default function Landing() {
               Herramientas
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              Desarrollo, publica, colabora
+              Crea, comparte y desarrolla
             </h2>
           </motion.div>
 
-          <div className="mt-20 grid gap-8 sm:grid-cols-3">
+          <div className="mt-20 grid gap-8 sm:grid-cols-2 max-w-3xl mx-auto">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}

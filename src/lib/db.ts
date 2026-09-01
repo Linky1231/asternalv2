@@ -94,13 +94,15 @@ export async function registerUser(
   }
 
   // Create auth user with Supabase Auth
+  // The database trigger (handle_new_user) auto-creates the user profile
+  const displayName = name?.trim() || cleanUsername;
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email: `${cleanUsername}@asternal.local`,
     password: password,
     options: {
       data: {
         username: cleanUsername,
-        name: name?.trim() || cleanUsername,
+        name: displayName,
       },
     },
   });
@@ -108,17 +110,36 @@ export async function registerUser(
   if (authError) throw authError;
   if (!authData.user) throw new Error("Error al crear el usuario");
 
-  // Create user profile
-  const displayName = name?.trim() || cleanUsername;
-  const { error: profileError } = await supabase.from("users").insert({
-    id: authData.user.id,
-    username: cleanUsername,
-    name: displayName,
-    email: `${cleanUsername}@asternal.local`,
-    role: "user",
-  });
+  // The trigger auto-creates the profile, but wait briefly then fetch it
+  // If the trigger hasn't finished yet, insert manually as fallback
+  await new Promise((r) => setTimeout(r, 500));
 
-  if (profileError) throw profileError;
+  const { data: existingProfile } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", authData.user.id)
+    .single();
+
+  if (!existingProfile) {
+    // Trigger didn't fire yet — insert manually
+    await supabase.from("users").insert({
+      id: authData.user.id,
+      username: cleanUsername,
+      name: displayName,
+      email: `${cleanUsername}@asternal.local`,
+      role: "user",
+    });
+  }
+
+  // Auto sign-in (Supabase may not auto-sign-in depending on email confirmation settings)
+  // Try to establish a session
+  if (!authData.session) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: `${cleanUsername}@asternal.local`,
+      password: password,
+    });
+    // Ignore signInError — user may need to confirm email
+  }
 
   return {
     _id: authData.user.id,
@@ -184,7 +205,28 @@ export async function getCurrentUser() {
     .from("users")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  // If profile doesn't exist yet (trigger race condition), create it
+  if (!profile) {
+    const username = user.user_metadata?.username || user.email?.split("@")[0] || "user";
+    const name = user.user_metadata?.name || username;
+    const { error: insertError } = await supabase.from("users").insert({
+      id: user.id,
+      username,
+      name,
+      email: user.email,
+      role: "user",
+    });
+    if (!insertError) {
+      const { data: newProfile } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+      return newProfile;
+    }
+  }
 
   return profile;
 }

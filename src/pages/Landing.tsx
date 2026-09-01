@@ -83,7 +83,7 @@ export default function Landing() {
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
           >
-            <Button size="sm" className="gap-1.5" onClick={() => navigate("/auth")}>
+            <Button size="sm" className="gap-1.5" onClick={() => navigate("/auth?mode=register")}>
               Comenzar <ChevronRight className="h-4 w-4" />
             </Button>
           </motion.div>
@@ -146,7 +146,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 className="gap-2 px-8"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/auth?mode=register")}
               >
                 Crear cuenta
                 <ChevronRight className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function Landing() {
                 size="lg"
                 variant="outline"
                 className="gap-2 px-8"
-                onClick={() => navigate("/auth?returnTo=/dashboard")}
+                onClick={() => navigate("/auth?mode=login&returnTo=/dashboard")}
               >
                 Iniciar sesión
               </Button>

@@ -35,7 +35,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     redirectAfterAuth,
   );
 
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const initialMode = searchParams.get("mode") === "register" ? "register" : "login";
+  const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -87,12 +88,17 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   };
 
   const switchMode = () => {
-    setMode(mode === "login" ? "register" : "login");
+    const newMode = mode === "login" ? "register" : "login";
+    setMode(newMode);
     setError(null);
     setUsername("");
     setPassword("");
     setConfirmPassword("");
     setDisplayName("");
+    // Update URL without full navigation
+    const params = new URLSearchParams(window.location.search);
+    params.set("mode", newMode);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
   };
 
   return (

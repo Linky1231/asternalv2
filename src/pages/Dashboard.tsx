@@ -1291,11 +1291,10 @@ function PostCard({
 
   return (
     <motion.div
-      layout="position"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98, y: -8 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
       className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-200 hover:border-border/80 hover:shadow-sm"
     >
       <div className="p-4 sm:p-5">
@@ -1898,7 +1897,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-8">
       {/* Header */}
       <div className="sticky top-0 z-50 border-b border-border/50 bg-background">
         <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
@@ -1916,54 +1915,61 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
       <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
         {userData ? (
           <div>
-            {/* Profile card */}
-            <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8">
-              <div className="flex flex-col items-center gap-4">
+            {/* ── Card 1: Avatar + Name + Title + Follow Stats ── */}
+            <div className="rounded-2xl border border-border/60 bg-card px-6 py-8 sm:px-8 sm:py-10">
+              <div className="flex flex-col items-center gap-5">
                 <Avatar className="h-24 w-24 border-2 border-border/50">
                   {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
                   <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                     {getInitials(userData.authorName)}
                   </AvatarFallback>
                 </Avatar>
-                {/* Name — primary, large, bold */}
+                {/* Name */}
                 <p className="text-xl font-extrabold tracking-tight text-card-foreground">{userData.authorName}</p>
-                {/* Title — secondary, smaller, muted */}
+                {/* Title */}
                 {(userData as any).authorTitle && (
                   <p className="text-sm font-medium italic text-primary/80">{(userData as any).authorTitle}</p>
                 )}
-                {/* Follow stats — tappable counts */}
+                {/* Separator */}
+                <div className="h-px w-16 bg-border/60" />
+                {/* Follow Stats */}
                 {followStats && (
-                  <div className="flex items-center gap-6 text-sm">
+                  <div className="flex items-center gap-8 text-sm">
                     <button
                       type="button"
                       onClick={() => setShowFollowList("followers")}
-                      className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                      className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
                     >
-                      <span className="font-semibold text-card-foreground tabular-nums">{followStats.followers}</span>
-                      <span>seguidores</span>
+                      <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
+                      <span className="text-[11px] text-muted-foreground">seguidores</span>
                     </button>
+                    <div className="h-8 w-px bg-border/60" />
                     <button
                       type="button"
                       onClick={() => setShowFollowList("following")}
-                      className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                      className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
                     >
-                      <span className="font-semibold text-card-foreground tabular-nums">{followStats.following}</span>
-                      <span>siguiendo</span>
+                      <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
+                      <span className="text-[11px] text-muted-foreground">siguiendo</span>
                     </button>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Bio */}
+            {/* ── Card 2: Bio ───────────────────────────────── */}
             {(userData as any).authorBio && (
-              <div className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
+              <div className="mt-4 rounded-2xl border border-border/60 bg-card px-6 py-5 sm:px-8 sm:py-6">
+                <div className="mb-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
+                </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
               </div>
             )}
 
+            {/* ── Section: Publicaciones ─────────────────────── */}
             <div className="mt-8 mb-4 border-t border-border/40 pt-6">
-              <p className="text-xs font-semibold text-muted-foreground">Publicaciones</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Publicaciones</p>
             </div>
             <div className="flex flex-col gap-4 pb-24">
               {(userPosts ?? []).length === 0 ? (
@@ -2652,13 +2658,13 @@ export default function Dashboard() {
 
         {/* Feed */}
         <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
-          <AnimatePresence mode="popLayout" initial={false}>
+          <AnimatePresence initial={false}>
             {posts === undefined ? null : posts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.25 }}
-                className="rounded-2xl border border-border/40 bg-card/50 px-6 py-16"
+                transition={{ duration: 0.3 }}
+                className="rounded-2xl border border-border/40 bg-card/50 px-6 py-12"
               >
                 <div className="flex flex-col items-center text-center">
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/8">
@@ -2697,12 +2703,8 @@ export default function Dashboard() {
                 </div>
               </motion.div>
             ) : (
-              <motion.div
+              <div
                 key={activeTab}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
                 className="flex flex-col gap-4 sm:gap-5"
               >
               {posts.map((post, idx) => (
@@ -2727,7 +2729,7 @@ export default function Dashboard() {
                   postNumber={posts.length - idx}
                 />
               ))}
-              </motion.div>
+              </div>
             )}
           </AnimatePresence>
         </div>

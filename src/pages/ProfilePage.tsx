@@ -163,15 +163,15 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
   const stagger = (i: number) => ({
-    initial: { opacity: 0, y: 16 },
+    initial: { opacity: 0, y: 12 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.35, delay: i * 0.06, ease: [0.25, 0.1, 0.25, 1] as const },
+    transition: { duration: 0.3, delay: i * 0.05, ease: [0.25, 0.1, 0.25, 1] as const },
   });
 
   return (
-    <div>
+    <div className="pb-8">
       {/* Header */}
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -189,9 +189,9 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           <button
             type="button"
             onClick={handleCancelEdit}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <span className="text-xs font-medium">Cancelar</span>
+            Cancelar
           </button>
         ) : (
           <DropdownMenu>
@@ -213,9 +213,10 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         )}
       </div>
 
-      {/* Profile card — inline editable */}
-      <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8">
-        <div className="flex flex-col items-center gap-4">
+      {/* ── Card 1: Avatar + Name + Title + Follow Stats ──────── */}
+      <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card px-6 py-8 sm:px-8 sm:py-10">
+        <div className="flex flex-col items-center gap-5">
+          {/* Avatar */}
           <div className="relative">
             <Avatar className="h-24 w-24 border-2 border-border/50">
               {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.name ?? ""} />}
@@ -240,7 +241,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
 
-          {/* Name — primary, large, bold */}
+          {/* Name */}
           {editing ? (
             <div className="flex w-full max-w-xs items-center gap-2">
               <input
@@ -268,7 +269,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             <p className="text-xl font-extrabold tracking-tight text-card-foreground">{user?.name ?? "Sin nombre"}</p>
           )}
 
-          {/* Title — secondary, italic */}
+          {/* Title */}
           {editing ? (
             <div className="flex w-full max-w-xs items-center gap-2">
               <input
@@ -296,79 +297,83 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             currentTitle && <p className="text-sm font-medium italic text-primary/80">{currentTitle}</p>
           )}
 
-          {/* Follow stats — tappable counts */}
+          {/* Separator */}
+          <div className="h-px w-16 bg-border/60" />
+
+          {/* Follow Stats */}
           {followStats && (
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-8 text-sm">
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 onClick={() => setShowFollowList("followers")}
-                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                className="flex flex-col items-center gap-0.5"
               >
-                <span className="font-semibold text-card-foreground tabular-nums">{followStats.followers}</span>
-                <span>seguidores</span>
+                <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
+                <span className="text-[11px] text-muted-foreground">seguidores</span>
               </motion.button>
+              <div className="h-8 w-px bg-border/60" />
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 onClick={() => setShowFollowList("following")}
-                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                className="flex flex-col items-center gap-0.5"
               >
-                <span className="font-semibold text-card-foreground tabular-nums">{followStats.following}</span>
-                <span>siguiendo</span>
+                <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
+                <span className="text-[11px] text-muted-foreground">siguiendo</span>
               </motion.button>
             </div>
           )}
-
-          {/* Bio — inline editable */}
-      
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
-          {editing && <Pencil className="h-3 w-3 text-muted-foreground" />}
-        </div>
-        {editing ? (
-          <div className="mt-3">
-            <textarea
-              value={editBio}
-              onChange={(e) => setEditBio(e.target.value)}
-              maxLength={200}
-              rows={4}
-              placeholder="Escribe algo sobre ti…"
-              className="w-full min-h-[120px] resize-none rounded-xl border border-border/60 bg-background px-4 py-3 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-            />
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-[11px] text-muted-foreground tabular-nums">{editBio.length}/200</span>
-              <Button
-                size="sm"
-                className="gap-1.5 px-4"
-                disabled={editBio === ((currentUser as any)?.bio ?? "") || savingBio}
-                onClick={handleSaveBio}
-              >
-                {savingBio ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : savedBio ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : null}
-                {savedBio ? "Guardado" : "Guardar"}
-              </Button>
-            </div>
-          </div>
-        ) : currentBio ? (
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{currentBio}</p>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground/50 italic">Sin descripción</p>
-        )}
-      
-
-
         </div>
       </motion.div>
 
-      {/* Sign out */}
+      {/* ── Card 2: Bio / Descripción ───────────────────────── */}
+      <motion.div {...stagger(1)} className="mt-4">
+        <div className="rounded-2xl border border-border/60 bg-card px-6 py-5 sm:px-8 sm:py-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
+            {editing && <Pencil className="h-3 w-3 text-muted-foreground" />}
+          </div>
+          {editing ? (
+            <div>
+              <textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                maxLength={200}
+                rows={4}
+                placeholder="Escribe algo sobre ti…"
+                className="w-full min-h-[100px] resize-none rounded-xl border border-border/60 bg-background px-4 py-3 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground tabular-nums">{editBio.length}/200</span>
+                <Button
+                  size="sm"
+                  className="gap-1.5 px-4"
+                  disabled={editBio === ((currentUser as any)?.bio ?? "") || savingBio}
+                  onClick={handleSaveBio}
+                >
+                  {savingBio ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : savedBio ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : null}
+                  {savedBio ? "Guardado" : "Guardar"}
+                </Button>
+              </div>
+            </div>
+          ) : currentBio ? (
+            <p className="text-sm text-muted-foreground leading-relaxed">{currentBio}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground/50 italic">Sin descripción</p>
+          )}
+        </div>
+      </motion.div>
+
+      {/* ── Card 3: Sign Out ────────────────────────────────── */}
       <motion.div {...stagger(2)} className="mt-4">
         <Button
           variant="outline"
@@ -380,12 +385,14 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </Button>
       </motion.div>
 
-      {/* User's own posts */}
+      {/* ── Section: Mis publicaciones ──────────────────────── */}
       {userPosts && userPosts.length > 0 && (
         <motion.div {...stagger(3)} className="mt-8">
-          <p className="mb-3 text-xs font-semibold text-muted-foreground">Mis publicaciones</p>
+          <div className="mb-4 border-t border-border/40 pt-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mis publicaciones</p>
+          </div>
           <div className="flex flex-col gap-4">
-            {userPosts.map((post, idx) => (
+            {userPosts.map((post) => (
               <div key={post._id} className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
                 {post.title && <p className="mb-1 text-sm font-bold text-card-foreground">{post.title}</p>}
                 <div className="text-[15px] leading-relaxed text-card-foreground" dangerouslySetInnerHTML={{ __html: post.content || "" }} />
@@ -420,6 +427,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           </div>
         </motion.div>
       )}
+
       <AnimatePresence>
         {showFollowList && user?._id && (
           <FollowListModalInline

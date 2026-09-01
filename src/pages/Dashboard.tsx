@@ -253,27 +253,34 @@ function useVideoThumbnail(url: string): string | null {
   useEffect(() => {
     if (!url) return;
     const video = document.createElement("video");
-    video.preload = "metadata";
+    video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
-    const revoke = () => { URL.revokeObjectURL(video.src); };
+    let cancelled = false;
+    const cleanup = () => {
+      try { URL.revokeObjectURL(video.src); } catch {}
+    };
     video.onloadeddata = () => {
-      video.currentTime = 0.5;
+      if (cancelled) return;
+      try { video.currentTime = 0.5; } catch { cleanup(); }
     };
     video.onseeked = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setThumb(canvas.toDataURL("image/jpeg", 0.7));
-      }
-      revoke();
+      if (cancelled) return;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 180;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          setThumb(canvas.toDataURL("image/jpeg", 0.7));
+        }
+      } catch {}
+      cleanup();
     };
-    video.onerror = () => revoke();
+    video.onerror = () => { if (!cancelled) cleanup(); };
     video.src = url;
-    return revoke;
+    return () => { cancelled = true; cleanup(); };
   }, [url]);
   return thumb;
 }
@@ -664,7 +671,7 @@ function FeedVideo({
 }) {
   const [videoError, setVideoError] = useState(false);
   const [aspectWarning, setAspectWarning] = useState(false);
-  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const objUrl = useVideoObjectUrl(item.url, item.mime || "video/mp4");
 
   return (
@@ -679,17 +686,19 @@ function FeedVideo({
     >
       {!videoError && objUrl ? (
         <video
-          preload="metadata"
+          preload="auto"
           muted
           playsInline
           className="mx-auto block max-h-80 w-full object-contain"
           onError={() => setVideoError(true)}
+          onLoadedData={() => setVideoReady(true)}
           onLoadedMetadata={(e) => {
-            setVideoLoaded(true);
             const v = e.currentTarget;
             if (isNonOptimalAspect(v.videoWidth, v.videoHeight)) {
               setAspectWarning(true);
             }
+            // Try to seek to first frame so it paints
+            try { v.currentTime = 0.1; } catch {}
           }}
           src={objUrl}
         />
@@ -705,14 +714,12 @@ function FeedVideo({
           <Film className="h-8 w-8 text-muted-foreground/40" />
         </div>
       )}
-      {/* Play button — only visible when video has loaded, NOT during loading */}
-      {videoLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/15 transition-colors group-hover:bg-black/25">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg transition-transform group-hover:scale-105">
-            <Play className="ml-0.5 h-5 w-5" />
-          </div>
+      {/* Play button — show when video data is ready OR always as fallback */}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg transition-transform group-hover:scale-105">
+          <Play className="ml-0.5 h-5 w-5" />
         </div>
-      )}
+      </div>
       {aspectWarning && <DimensionBadge />}
     </div>
   );
@@ -1058,19 +1065,25 @@ function FormatToolbar() {
 function VideoThumb({ src, alt }: { src: string; alt?: string }) {
   const thumb = useVideoThumbnail(src);
   return (
-    <div className="relative h-28 w-full bg-muted flex items-center justify-center overflow-hidden rounded-xl">
+    <div className="relative h-28 w-full bg-muted overflow-hidden rounded-xl">
       {thumb ? (
-        <img src={thumb} alt={alt ?? ""} className="h-full w-full object-cover" />
+        <>
+          <img src={thumb} alt={alt ?? ""} className="h-full w-full object-cover" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors hover:bg-black/20">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90 shadow-md">
+              <Play className="ml-0.5 h-3.5 w-3.5" />
+            </div>
+          </div>
+        </>
       ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <span className="text-xs text-muted-foreground">Cargando…</span>
-        </div>
+        <video
+          src={src}
+          preload="metadata"
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+        />
       )}
-      <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90">
-          <Play className="ml-0.5 h-3.5 w-3.5" />
-        </div>
-      </div>
     </div>
   );
 }

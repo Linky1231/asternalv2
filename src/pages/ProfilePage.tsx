@@ -24,6 +24,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/** Format large numbers in Spanish */
+function formatCount(n: number): string {
+  if (n < 1000) return n.toString();
+  if (n < 10000) {
+    const k = n / 1000;
+    return k.toFixed(1).replace(".", ",") + " mil";
+  }
+  if (n < 1000000) {
+    return Math.round(n / 1000) + " mil";
+  }
+  const m = n / 1000000;
+  if (m < 10) return m.toFixed(1).replace(".", ",") + " M";
+  return Math.round(m) + " M";
+}
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -320,7 +335,13 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                   onClick={() => setShowFollowList("followers")}
                   className="flex flex-col items-center gap-0.5"
                 >
-                  <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
+                  <motion.span
+                    key={followStats.followers}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-lg font-bold tabular-nums text-card-foreground"
+                  >{formatCount(followStats.followers)}</motion.span>
                   <span className="text-[11px] text-muted-foreground">seguidores</span>
                 </motion.button>
                 <div className="h-8 w-px bg-border/60" />
@@ -332,7 +353,13 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                   onClick={() => setShowFollowList("following")}
                   className="flex flex-col items-center gap-0.5"
                 >
-                  <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
+                  <motion.span
+                    key={followStats.following}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-lg font-bold tabular-nums text-card-foreground"
+                  >{formatCount(followStats.following)}</motion.span>
                   <span className="text-[11px] text-muted-foreground">siguiendo</span>
                 </motion.button>
               </>

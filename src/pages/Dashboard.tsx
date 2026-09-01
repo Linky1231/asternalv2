@@ -123,6 +123,21 @@ interface DocumentUrl {
   mime?: string;
 }
 
+/** Format large numbers in Spanish: 1200 -> 1,2 mil, 10000 -> 10 mil, etc. */
+function formatCount(n: number): string {
+  if (n < 1000) return n.toString();
+  if (n < 10000) {
+    const k = n / 1000;
+    return k.toFixed(1).replace(".", ",") + " mil";
+  }
+  if (n < 1000000) {
+    return Math.round(n / 1000) + " mil";
+  }
+  const m = n / 1000000;
+  if (m < 10) return m.toFixed(1).replace(".", ",") + " M";
+  return Math.round(m) + " M";
+}
+
 // ── Utilities ──────────────────────────────────────────────────────
 function formatTime(timestamp: number) {
   const diff = Date.now() - timestamp;
@@ -315,17 +330,20 @@ function removeStyleFromSelection(prop: string) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
   const range = sel.getRangeAt(0).cloneRange();
-  // Restore selection first
-  sel.removeAllRanges();
-  sel.addRange(range);
+  const startC = range.startContainer;
+  const startO = range.startOffset;
+  const endC = range.endContainer;
+  const endO = range.endOffset;
   const fragment = range.extractContents();
   removeStyleFromFragment(fragment, prop);
   range.insertNode(fragment);
-  // Collapse to end to avoid partial selection issues
-  range.collapse(false);
-  // Restore selection after DOM modification
-  sel.removeAllRanges();
-  sel.addRange(range);
+  try {
+    const nr = document.createRange();
+    nr.setStart(startC, startO);
+    nr.setEnd(endC, endO);
+    sel.removeAllRanges();
+    sel.addRange(nr);
+  } catch {}
 }
 
 /**
@@ -1000,7 +1018,7 @@ function FormatToolbar() {
               <input
                 type="color"
                 className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
-                onChange={(e) => { applyStyleToSelection("color", e.target.value); setShowColors(false); }}
+                onChange={(e) => { restoreSelection(); applyStyleToSelection("color", e.target.value); setShowColors(false); }}
               />
               <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowColors(false)}><X className="h-3 w-3" /></button>
             </div>
@@ -1034,16 +1052,12 @@ function FormatToolbar() {
                         const nextSize = isDefault ? "" : s.value;
                         setActiveSize(nextSize);
                         setShowSizes(false);
-                        // Double-RAF: wait for React to commit DOM changes
-                        // before restoring selection and modifying styles
                         requestAnimationFrame(() => {
-                          requestAnimationFrame(() => {
-                            restoreSelection();
-                            removeStyleFromSelection("fontSize");
-                            if (!isDefault) {
-                              applyStyleToSelection("fontSize", s.value);
-                            }
-                          });
+                          restoreSelection();
+                          removeStyleFromSelection("fontSize");
+                          if (!isDefault) {
+                            applyStyleToSelection("fontSize", s.value);
+                          }
                         });
                       }}
                     >
@@ -1977,7 +1991,13 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
                         onClick={() => setShowFollowList("followers")}
                         className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
                       >
-                        <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
+                        <motion.span
+                          key={followStats.followers}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="text-lg font-bold tabular-nums text-card-foreground"
+                        >{formatCount(followStats.followers)}</motion.span>
                         <span className="text-[11px] text-muted-foreground">seguidores</span>
                       </button>
                       <div className="h-8 w-px bg-border/60" />
@@ -1986,7 +2006,13 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
                         onClick={() => setShowFollowList("following")}
                         className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
                       >
-                        <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
+                        <motion.span
+                          key={followStats.following}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="text-lg font-bold tabular-nums text-card-foreground"
+                        >{formatCount(followStats.following)}</motion.span>
                         <span className="text-[11px] text-muted-foreground">siguiendo</span>
                       </button>
                     </>

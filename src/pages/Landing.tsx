@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Gamepad2, Users, MessageCircle, ChevronRight } from "lucide-react";
+import { Code2, Cpu, Rocket, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
 
@@ -14,19 +14,19 @@ const fadeUp = {
 
 const features = [
   {
-    icon: MessageCircle,
-    title: "Comparte tus momentos",
-    desc: "Publica highlights, estrategias e historias con tu comunidad.",
+    icon: Code2,
+    title: "Compila tu proyecto",
+    desc: "Publica builds, demos y work-in-progress. Recibe feedback técnico directo de otros desarrolladores.",
   },
   {
-    icon: Users,
-    title: "Arma tu escuadrón",
-    desc: "Conéctate con gamers que comparten tu pasión y estilo de juego.",
+    icon: Cpu,
+    title: "Arma tu equipo",
+    desc: "Encuentra programadores, artistas y diseñadores que buscan colaborar en proyectos reales.",
   },
   {
-    icon: Gamepad2,
-    title: "Gaming primero",
-    desc: "Un espacio social hecho por gamers, para gamers — sin ruido, solo comunidad.",
+    icon: Rocket,
+    title: "Lanza tu juego",
+    desc: "Comparte tu proceso de desarrollo, documenta tu stack y conecta con la comunidad GameDev.",
   },
 ];
 
@@ -54,7 +54,7 @@ export default function Landing() {
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Versión 1 disponible
+              Engine v1 — open beta
             </div>
           </motion.div>
 
@@ -65,9 +65,9 @@ export default function Landing() {
             variants={fadeUp}
             custom={1}
           >
-            Tu Comunidad{" "}
-            <span className="text-primary">Gamer</span>{" "}
-            te espera
+            Tu motor de{" "}
+            <span className="text-primary">juegos</span>{" "}
+            empieza aquí
           </motion.h1>
 
           <motion.p
@@ -77,8 +77,8 @@ export default function Landing() {
             variants={fadeUp}
             custom={2}
           >
-            Asternal es el centro social para gamers. Comparte momentos, conecta
-            con tu escuadrón y construye algo juntos.
+            Asternal es una plataforma para desarrolladores de videojuegos.
+            Publica tus proyectos, colabora con otros devs y construye tu próximo juego.
           </motion.p>
 
           <motion.div
@@ -90,7 +90,7 @@ export default function Landing() {
           >
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
               <Button size="lg" className="gap-2 px-8" onClick={() => navigate("/auth")}>
-                Únete a la comunidad
+                Crear cuenta
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </motion.div>
@@ -119,10 +119,10 @@ export default function Landing() {
             custom={0}
           >
             <p className="text-sm font-semibold uppercase tracking-widest text-primary">
-              Lo que obtienes
+              Herramientas
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              Hecho para la comunidad
+              Desarrollo, publica, colabora
             </h2>
           </motion.div>
 

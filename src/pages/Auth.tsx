@@ -134,7 +134,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               Asternal
             </h1>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              Motor de videojuegos y red social para tu comunidad
+              Plataforma de desarrollo de videojuegos y comunidad GameDev
             </p>
           </motion.div>
 

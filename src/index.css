@@ -286,3 +286,41 @@ video {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
+
+
+/* Smooth input focus transitions */
+input:focus,
+textarea:focus,
+[contenteditable]:focus {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+/* Button press feedback for non-Framer buttons */
+button:not([data-framer-motion]) {
+  transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease;
+}
+button:not([data-framer-motion]):active {
+  transform: scale(0.97);
+}
+
+/* Smooth avatar image load */
+[data-slot="avatar-image"] {
+  transition: opacity 0.3s ease;
+}
+
+/* Smooth tab indicator already handled by Framer Motion layoutId */
+
+/* Navbar smooth transitions */
+nav {
+  transition: background-color 200ms ease;
+}
+
+/* Dropdown menu smooth open/close — override Radix defaults */
+[data-slot="dropdown-menu-content"] {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+/* Profile card hover */
+.rounded-2xl {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}

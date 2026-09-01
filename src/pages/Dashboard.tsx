@@ -752,7 +752,7 @@ function ImageWithDetection({
         src={item.url}
         alt={`Imagen ${index + 1}`}
         loading="lazy"
-        className="mx-auto block max-h-80 w-full object-contain"
+        className="mx-auto block max-h-80 w-full object-contain transition-opacity duration-300"
         onLoad={(e) => {
           const img = e.currentTarget;
           if (isNonOptimalAspect(img.naturalWidth, img.naturalHeight)) {
@@ -952,7 +952,7 @@ function FormatToolbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
@@ -997,7 +997,7 @@ function FormatToolbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
             <div className="mt-2 flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
@@ -1111,8 +1111,9 @@ function CommentItem({
           <div className="mt-1.5 flex items-center gap-3">
             <motion.button
               type="button"
-              whileTap={{ scale: 0.8 }}
-              transition={{ type: "spring", stiffness: 600, damping: 15 }}
+              whileTap={{ scale: 0.85 }}
+              whileHover={{ scale: 1.1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 18 }}
               onClick={() => toggleCommentLike({ commentId: comment._id as any })}
               className={`flex items-center gap-1 text-[10px] transition-colors ${
                 comment.likedByMe ? "text-primary" : "text-muted-foreground hover:text-primary"
@@ -1170,7 +1171,7 @@ function CommentItem({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
                 >
                   <CommentItem
                     comment={reply}
@@ -1290,12 +1291,12 @@ function PostCard({
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 6 }}
+      layout="position"
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-      className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-border"
+      exit={{ opacity: 0, scale: 0.98, y: -8 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-200 hover:border-border/80 hover:shadow-sm"
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
@@ -1319,6 +1320,8 @@ function PostCard({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   onClick={() => isFollowingUser ? onRequestUnfollow(post.authorId, post.authorName) : onFollow(post.authorId)}
                   className={`ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-md border transition-colors ${
                     isFollowingUser
@@ -1389,8 +1392,9 @@ function PostCard({
         <div className="flex items-center gap-2 sm:gap-3">
           <motion.button
             type="button"
-            whileTap={{ scale: 0.85 }}
-            transition={{ type: "spring", stiffness: 800, damping: 20 }}
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
             onClick={() => onToggleLike(post._id)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
               post.likedByMe
@@ -1417,8 +1421,9 @@ function PostCard({
           {/* Favorites */}
           <motion.button
             type="button"
-            whileTap={{ scale: 0.85 }}
-            transition={{ type: "spring", stiffness: 600, damping: 15 }}
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
             onClick={() => onToggleFavorite(post._id)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               post.favoritedByMe
@@ -1438,8 +1443,9 @@ function PostCard({
           {/* Share */}
           <motion.button
             type="button"
-            whileTap={{ scale: 0.85 }}
-            transition={{ type: "spring", stiffness: 600, damping: 15 }}
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Share2 className="h-4 w-4" />
@@ -1449,7 +1455,8 @@ function PostCard({
             <motion.button
               type="button"
               whileTap={{ scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 600, damping: 15 }}
+              whileHover={{ scale: 1.1, color: "var(--destructive)" }}
+              transition={{ type: "spring", stiffness: 500, damping: 20 }}
               onClick={() => onRequestDelete(post._id)}
               className="ml-auto rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive"
             >
@@ -1463,7 +1470,9 @@ function PostCard({
       <div className="border-t border-border/40 px-4 py-2 sm:px-5">
         <motion.button
           type="button"
-          whileTap={{ scale: 0.98 }}
+          whileTap={{ scale: 0.97 }}
+          whileHover={{ backgroundColor: "var(--muted)" }}
+          transition={{ type: "spring", stiffness: 500, damping: 20 }}
           onClick={() => onOpenComments({ ...post, postNumber: postNumber ?? 0 })}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
         >
@@ -1738,7 +1747,7 @@ function CommentsModal({
               initial={{ opacity: 0, height: 0, marginTop: 0 }}
               animate={{ opacity: 1, height: "auto", marginTop: 8 }}
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden text-[10px] text-muted-foreground"
             >
               <div className="flex items-center gap-1.5">
@@ -2404,11 +2413,28 @@ export default function Dashboard() {
 
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 pt-6 pb-20 sm:pt-10 sm:pb-24">
-        {currentView === "userProfile" ? (
-          <UserProfileView userId={viewingUserId!} onBack={() => { setCurrentView("feed"); setViewingUserId(null); }} />
-        ) : currentView === "profile" ? (
-          <ProfilePage onBack={() => setCurrentView("feed")} />
-        ) : (<>
+        <AnimatePresence mode="wait" initial={false}>
+          {currentView === "userProfile" ? (
+            <motion.div
+              key="userProfile"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              <UserProfileView userId={viewingUserId!} onBack={() => { setCurrentView("feed"); setViewingUserId(null); }} />
+            </motion.div>
+          ) : currentView === "profile" ? (
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              <ProfilePage onBack={() => setCurrentView("feed")} />
+            </motion.div>
+          ) : (<>
         {/* Composer */}
         <div
           className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5"
@@ -2626,7 +2652,7 @@ export default function Dashboard() {
 
         {/* Feed */}
         <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
-          <AnimatePresence mode="wait" initial={false}>
+          <AnimatePresence mode="popLayout" initial={false}>
             {posts === undefined ? null : posts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -2706,7 +2732,8 @@ export default function Dashboard() {
           </AnimatePresence>
         </div>
         </>
-        )}
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Lightbox */}

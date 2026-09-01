@@ -163,9 +163,9 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
   const stagger = (i: number) => ({
-    initial: { opacity: 0, y: 12 },
+    initial: { opacity: 0, y: 16 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.3, delay: i * 0.04, ease: [0.25, 0.1, 0.25, 1] as const },
+    transition: { duration: 0.35, delay: i * 0.06, ease: [0.25, 0.1, 0.25, 1] as const },
   });
 
   return (
@@ -299,22 +299,28 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           {/* Follow stats — tappable counts */}
           {followStats && (
             <div className="flex items-center gap-6 text-sm">
-              <button
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 onClick={() => setShowFollowList("followers")}
                 className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <span className="font-semibold text-card-foreground tabular-nums">{followStats.followers}</span>
                 <span>seguidores</span>
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 onClick={() => setShowFollowList("following")}
                 className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <span className="font-semibold text-card-foreground tabular-nums">{followStats.following}</span>
                 <span>siguiendo</span>
-              </button>
+              </motion.button>
             </div>
           )}
 

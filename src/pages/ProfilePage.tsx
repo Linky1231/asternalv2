@@ -174,7 +174,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
   const followStats = useQuery(
     api.follows.getFollowStats,
-    user?._id ? { userId: user._id } : "skip",
+    user?._id ? { userId: user._id as any } : "skip",
   );
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 

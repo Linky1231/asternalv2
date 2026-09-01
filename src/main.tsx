@@ -1,6 +1,7 @@
-import '@vly-ai/integrations';
+import "@vly-ai/integrations";
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { ConvexGracefulProvider } from "@/components/ConvexGraceful";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -14,6 +15,9 @@ const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+
+// Degraded mode components (no Convex hooks)
+const DegradedDashboard = lazy(() => import("./pages/DegradedDashboard.tsx"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -80,9 +84,9 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
-
-
+const convex = new ConvexReactClient(
+  import.meta.env.VITE_CONVEX_URL as string,
+);
 
 function RouteSyncer() {
   const location = useLocation();
@@ -107,6 +111,61 @@ function RouteSyncer() {
   return null;
 }
 
+/** Normal app route tree — uses Convex hooks inside Dashboard, ProfilePage, etc. */
+function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <RouteSyncer />
+      <Suspense fallback={<RouteLoading />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route
+            path="/auth"
+            element={<AuthPage redirectAfterAuth="/dashboard" />}
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth>
+                <Dashboard />
+              </RequireAuth>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+      <Toaster />
+    </BrowserRouter>
+  );
+}
+
+/** Degraded app route tree — NO Convex hooks. Used when Convex is unavailable. */
+function DegradedAppRoutes() {
+  return (
+    <BrowserRouter>
+      <RouteSyncer />
+      <Suspense fallback={<RouteLoading />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route
+            path="/auth"
+            element={<AuthPage redirectAfterAuth="/dashboard" />}
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth>
+                <DegradedDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+      <Toaster />
+    </BrowserRouter>
+  );
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -114,30 +173,21 @@ createRoot(document.getElementById("root")!).render(
       <ToolbarErrorBoundary>
         <VlyToolbar />
       </ToolbarErrorBoundary>
-      <ConvexAuthProvider client={convex}>
-        <BrowserRouter>
-          <RouteSyncer />
-          <Suspense fallback={<RouteLoading />}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route
-                path="/auth"
-                element={<AuthPage redirectAfterAuth="/dashboard" />}
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <RequireAuth>
-                    <Dashboard />
-                  </RequireAuth>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-        <Toaster />
-      </ConvexAuthProvider>
+      {/**
+       * ConvexGracefulProvider wraps ConvexAuthProvider and catches any errors
+       * thrown by Convex (e.g., usage limit exceeded). When that happens, it
+       * enters "degraded mode" and re-renders DegradedAppRoutes *without*
+       * ConvexProvider, so the UI still works for preview/review purposes.
+       * In production (where Convex is available), everything runs normally.
+       */}
+      <ConvexGracefulProvider
+        convexChildren={
+          <ConvexAuthProvider client={convex}>
+            <AppRoutes />
+          </ConvexAuthProvider>
+        }
+        degradedChildren={<DegradedAppRoutes />}
+      />
     </RootErrorBoundary>
   </StrictMode>,
 );

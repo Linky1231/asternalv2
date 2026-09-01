@@ -162,16 +162,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       setSavingAvatar(true);
       try {
         const path = generateFilePath(user?._id || '', file.name, 'avatars');
-        const result = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-        if (!result.ok) throw new Error(`HTTP ${result.status}`);
-        const json = await result.json();
-        if (json.storageId) {
-          await updateProfile(user?._id || '', { image: path });
-        }
+        await uploadFile('avatars', file, path);
+        await updateProfile(user?._id || '', { image: path });
       } catch (err) {
         console.error("Error al subir avatar:", err);
       } finally {
@@ -469,7 +461,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 <div className="text-[15px] leading-relaxed text-card-foreground" dangerouslySetInnerHTML={{ __html: post.content || "" }} />
                 {post.mediaUrls && post.mediaUrls.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    {post.mediaUrls.map((m, i) =>
+                    {post.mediaUrls.map((m: { url: string; type: string }, i: number) =>
                       m.type === "video" ? (
                         <div key={i} className="relative h-28 w-full rounded-xl overflow-hidden bg-muted">
                           <video
@@ -525,16 +517,16 @@ function FollowListModalInline({
   const [list, setList] = useState<any[]>([]);
   useEffect(() => {
     const fetchList = async () => {
-      if (!user?._id) return;
+      if (!userId) return;
       try {
-        const data = type === "followers" ? await getFollowers(user._id) : await getFollowing(user._id);
+        const data = type === "followers" ? await getFollowers(userId) : await getFollowing(userId);
         setList(data);
       } catch (error) {
         console.error("Error fetching follow list:", error);
       }
     };
     fetchList();
-  }, [type, user?._id]);
+  }, [type, userId]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

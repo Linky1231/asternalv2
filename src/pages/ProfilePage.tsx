@@ -480,8 +480,8 @@ function FollowListModalInline({
       </div>
       <div className="flex-1 overflow-y-auto">
         {list === undefined ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          <div className="flex flex-col items-center justify-center py-16" style={{ minHeight: 120 }}>
+            <span />
           </div>
         ) : list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">

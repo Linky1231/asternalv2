@@ -869,19 +869,26 @@ function FormatToolbar() {
             if (showSizes) { setShowSizes(false); return; }
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
             saveSelection();
-            // Detect current size from selection
+            // Detect current size from selection — walk up to find styled span
             const sel = window.getSelection();
             if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-              const node = sel.getRangeAt(0).startContainer;
-              const el = node instanceof HTMLElement ? node : node.parentElement;
-              if (el) {
-                const computed = window.getComputedStyle(el);
-                const fs = computed.fontSize;
-                if (fs === "24px") setActiveSize("24px");
-                else if (fs === "20px") setActiveSize("20px");
-                else if (fs === "17px") setActiveSize("17px");
-                else setActiveSize("");
+              let node: Node | null = sel.getRangeAt(0).startContainer;
+              let found = false;
+              // Walk up from anchor to root looking for a fontSize span
+              let depth = 0;
+              while (node && depth < 20) {
+                depth++;
+                if (node instanceof HTMLElement && node.tagName === "SPAN") {
+                  const fs = node.style.fontSize;
+                  if (fs === "24px" || fs === "20px" || fs === "17px") {
+                    setActiveSize(fs);
+                    found = true;
+                    break;
+                  }
+                }
+                node = node.parentNode;
               }
+              if (!found) setActiveSize("");
             }
             setShowSizes(true);
           }}
@@ -1006,13 +1013,18 @@ function FormatToolbar() {
                       className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        restoreSelection();
-                        removeStyleFromSelection("fontSize");
-                        if (!isDefault) {
-                          applyStyleToSelection("fontSize", s.value);
-                        }
-                        setActiveSize(s.value);
+                        // Update state first (re-render closes panel)
+                        const nextSize = isDefault ? "" : s.value;
+                        setActiveSize(nextSize);
                         setShowSizes(false);
+                        // Restore selection and apply after state update
+                        requestAnimationFrame(() => {
+                          restoreSelection();
+                          removeStyleFromSelection("fontSize");
+                          if (!isDefault) {
+                            applyStyleToSelection("fontSize", s.value);
+                          }
+                        });
                       }}
                     >
                       {s.label}
@@ -1279,10 +1291,10 @@ function PostCard({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97, y: -6 }}
-      transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
       className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-border"
     >
       <div className="p-4 sm:p-5">
@@ -1826,8 +1838,8 @@ function FollowListModal({
       </div>
       <div className="flex-1 overflow-y-auto">
         {list === undefined ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          <div className="flex flex-col items-center justify-center py-16" style={{ minHeight: 120 }}>
+            <span />
           </div>
         ) : list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -2398,10 +2410,7 @@ export default function Dashboard() {
           <ProfilePage onBack={() => setCurrentView("feed")} />
         ) : (<>
         {/* Composer */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+        <div
           className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
@@ -2584,13 +2593,10 @@ export default function Dashboard() {
 
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* ── Feed Tabs ──────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+        <div
           className="mt-4 overflow-hidden rounded-2xl border border-border/60 bg-card"
         >
           <div className="relative flex">
@@ -2616,7 +2622,7 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Feed */}
         <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">

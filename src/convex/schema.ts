@@ -28,7 +28,11 @@ const schema = defineSchema(
       role: v.optional(roleValidator),
       bio: v.optional(v.string()),
       title: v.optional(v.string()),
-    }).index("email", ["email"]),
+      username: v.optional(v.string()),
+      passwordHash: v.optional(v.string()),
+    })
+      .index("email", ["email"])
+      .index("username", ["username"]),
 
     posts: defineTable({
       authorId: v.id("users"),

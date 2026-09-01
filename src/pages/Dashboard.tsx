@@ -2032,8 +2032,7 @@ export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"forYou" | "following" | "popular">("forYou");
-  const userRole = useQuery(api.users.getRole);
-  const isAdmin = userRole === "admin";
+  const isAdmin = (user as any)?.role === "admin";
   const [currentView, setCurrentView] = useState<"feed" | "profile" | "userProfile">("feed");
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const posts = useQuery(api.posts.list, { sortBy: activeTab });

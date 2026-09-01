@@ -57,7 +57,11 @@ export const currentUser = query({
       return null;
     }
 
-    return user;
+    // Include role directly in the user object to avoid a separate getRole query
+    return {
+      ...user,
+      role: (user as any)?.role ?? null,
+    };
   },
 });
 
@@ -250,6 +254,7 @@ export const deletePostAsAdmin = mutation({
 
 /**
  * Get the current user's role.
+ * @deprecated Use currentUser.role instead
  */
 export const getRole = query({
   args: {},
@@ -258,5 +263,244 @@ export const getRole = query({
     if (!userId) return null;
     const user = await ctx.db.get(userId);
     return (user as any)?.role ?? null;
+  },
+});
+
+/**
+ * Get a user's profile with follow stats and posts in a single call.
+ * Avoids separate queries for user info, follow stats, and posts.
+ */
+export const getUserProfile = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const rawUser = await ctx.db.get(args.userId as any);
+    if (!rawUser) return null;
+    const user = rawUser as any; // users table document
+
+    // Resolve avatar URL
+    let avatarUrl: string | undefined;
+    if (user.image) {
+      avatarUrl = (await ctx.storage.getUrl(user.image)) ?? undefined;
+    }
+
+    // Follow stats in one pass
+    const followerRecords = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q) => q.eq("followingId", user._id))
+      .collect();
+    const followingRecords = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q) => q.eq("followerId", user._id))
+      .collect();
+
+    // Current user's follow status
+    const currentUserId = await getAuthUserId(ctx);
+    let isFollowing = false;
+    if (currentUserId && currentUserId !== user._id) {
+      const pair = await ctx.db
+        .query("follows")
+        .withIndex("by_pair", (q) =>
+          q.eq("followerId", currentUserId).eq("followingId", user._id),
+        )
+        .first();
+      isFollowing = pair !== null;
+    }
+
+    // User's posts
+    const allPosts = await ctx.db
+      .query("posts")
+      .withIndex("by_created")
+      .order("desc")
+      .collect();
+    const userPosts = allPosts
+      .filter((p) => p.authorId === args.userId)
+      .slice(0, 30);
+
+    const postsWithData = await Promise.all(
+      userPosts.map(async (post) => {
+        const mediaUrls = post.media
+          ? await Promise.all(
+              post.media.map(async (m: any) => ({
+                url: (await ctx.storage.getUrl(m.storageId)) ?? "",
+                type: m.type,
+                mime: m.mime ?? undefined,
+              })),
+            )
+          : [];
+        const documentUrls = (post as any).documents
+          ? await Promise.all(
+              (post as any).documents.map(async (d: any) => ({
+                url: (await ctx.storage.getUrl(d.storageId)) ?? "",
+                name: d.name,
+                size: d.size,
+                mime: d.mime ?? undefined,
+              })),
+            )
+          : [];
+        let likedByMe = false;
+        let favoritedByMe = false;
+        if (currentUserId) {
+          const like = await ctx.db
+            .query("likes")
+            .withIndex("by_user_post", (q) =>
+              q.eq("userId", currentUserId).eq("postId", post._id),
+            )
+            .first();
+          likedByMe = !!like;
+          const fav = await ctx.db
+            .query("favorites")
+            .withIndex("by_user_post", (q) =>
+              q.eq("userId", currentUserId).eq("postId", post._id),
+            )
+            .first();
+          favoritedByMe = !!fav;
+        }
+        return {
+          _id: post._id,
+          authorId: post.authorId,
+          title: post.title,
+          content: post.content,
+          createdAt: post.createdAt,
+          likes: post.likes,
+          favorites: post.favorites,
+          shares: post.shares,
+          mediaUrls,
+          documentUrls,
+          authorName: user.name ?? "Anónimo",
+          authorImageUrl: avatarUrl,
+          likedByMe,
+          favoritedByMe,
+          mentions: (post as any).mentions ?? [],
+          hashtags: (post as any).hashtags ?? [],
+        };
+      }),
+    );
+
+    return {
+      _id: user._id,
+      name: user.name ?? "Anónimo",
+      email: user.email,
+      image: user.image,
+      avatarUrl,
+      bio: user.bio ?? "",
+      title: user.title ?? "",
+      followers: followerRecords.length,
+      following: followingRecords.length,
+      isFollowing,
+      posts: postsWithData,
+    };
+  },
+});
+
+// ── Username / Password Auth ───────────────────────────────────────
+
+/** Simple SHA-256 hash using Web Crypto (available in Convex runtime). */
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Register a new user with username and password.
+ * Returns the created user (without passwordHash).
+ */
+export const register = mutation({
+  args: {
+    username: v.string(),
+    password: v.string(),
+    name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const username = args.username.trim().toLowerCase();
+    if (username.length < 3) {
+      throw new Error("El nombre de usuario debe tener al menos 3 caracteres");
+    }
+    if (username.length > 20) {
+      throw new Error("El nombre de usuario no puede tener más de 20 caracteres");
+    }
+    if (!/^[a-z0-9_]+$/.test(username)) {
+      throw new Error("El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos");
+    }
+    if (args.password.length < 4) {
+      throw new Error("La contraseña debe tener al menos 4 caracteres");
+    }
+
+    // Check if username is already taken
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("username", (q) => q.eq("username", username))
+      .first();
+    if (existing) {
+      throw new Error("Este nombre de usuario ya está en uso");
+    }
+
+    const passwordHash = await hashPassword(args.password);
+    const displayName = args.name?.trim() || username;
+
+    const userId = await ctx.db.insert("users", {
+      name: displayName,
+      username,
+      passwordHash,
+      email: undefined,
+      role: "user",
+    });
+
+    return {
+      _id: userId,
+      name: displayName,
+      username,
+    };
+  },
+});
+
+/**
+ * Login with username and password.
+ * Returns user data on success, throws on failure.
+ */
+export const login = mutation({
+  args: {
+    username: v.string(),
+    password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const username = args.username.trim().toLowerCase();
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("username", (q) => q.eq("username", username))
+      .first();
+
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    const userAny = user as any;
+    if (!userAny.passwordHash) {
+      throw new Error("Esta cuenta no tiene contraseña configurada");
+    }
+
+    const passwordHash = await hashPassword(args.password);
+    if (passwordHash !== userAny.passwordHash) {
+      throw new Error("Contraseña incorrecta");
+    }
+
+    // Resolve avatar URL
+    let avatarUrl: string | undefined;
+    if (user.image) {
+      avatarUrl = (await ctx.storage.getUrl(user.image)) ?? undefined;
+    }
+
+    return {
+      _id: user._id,
+      name: user.name ?? "Anónimo",
+      username: userAny.username,
+      email: user.email,
+      image: user.image,
+      avatarUrl,
+      role: userAny.role ?? "user",
+    };
   },
 });

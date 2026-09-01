@@ -300,34 +300,48 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           {/* Separator */}
           <div className="h-px w-16 bg-border/60" />
 
-          {/* Follow Stats */}
-          {followStats && (
-            <div className="flex items-center gap-8 text-sm">
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                onClick={() => setShowFollowList("followers")}
-                className="flex flex-col items-center gap-0.5"
-              >
-                <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
-                <span className="text-[11px] text-muted-foreground">seguidores</span>
-              </motion.button>
-              <div className="h-8 w-px bg-border/60" />
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                onClick={() => setShowFollowList("following")}
-                className="flex flex-col items-center gap-0.5"
-              >
-                <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
-                <span className="text-[11px] text-muted-foreground">siguiendo</span>
-              </motion.button>
-            </div>
-          )}
+          {/* Follow Stats — always rendered to prevent layout shift */}
+          <div className="flex items-center gap-8 text-sm" style={{ minHeight: 44 }}>
+            {followStats ? (
+              <>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  onClick={() => setShowFollowList("followers")}
+                  className="flex flex-col items-center gap-0.5"
+                >
+                  <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
+                  <span className="text-[11px] text-muted-foreground">seguidores</span>
+                </motion.button>
+                <div className="h-8 w-px bg-border/60" />
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  onClick={() => setShowFollowList("following")}
+                  className="flex flex-col items-center gap-0.5"
+                >
+                  <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
+                  <span className="text-[11px] text-muted-foreground">siguiendo</span>
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="h-5 w-8 animate-pulse rounded bg-muted" />
+                  <div className="h-2.5 w-14 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="h-8 w-px bg-border/60" />
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="h-5 w-8 animate-pulse rounded bg-muted" />
+                  <div className="h-2.5 w-12 animate-pulse rounded bg-muted" />
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </motion.div>
 

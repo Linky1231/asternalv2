@@ -1382,7 +1382,7 @@ function PostCard({
       )}
       {/* Documents */}
       {post.documentUrls && post.documentUrls.length > 0 && (
-        <div className="px-4 pb-3 sm:px-5">
+        <div className="px-4 pb-3 pt-3 sm:px-5 sm:pt-4 border-t border-border/30">
           <div className="flex flex-col gap-2">
             {post.documentUrls.map((doc, i) => {
               const ext = doc.name.split(".").pop()?.toUpperCase() ?? "FILE";
@@ -1958,28 +1958,42 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
                 )}
                 {/* Separator */}
                 <div className="h-px w-16 bg-border/60" />
-                {/* Follow Stats */}
-                {followStats && (
-                  <div className="flex items-center gap-8 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => setShowFollowList("followers")}
-                      className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
-                    >
-                      <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
-                      <span className="text-[11px] text-muted-foreground">seguidores</span>
-                    </button>
-                    <div className="h-8 w-px bg-border/60" />
-                    <button
-                      type="button"
-                      onClick={() => setShowFollowList("following")}
-                      className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
-                    >
-                      <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
-                      <span className="text-[11px] text-muted-foreground">siguiendo</span>
-                    </button>
-                  </div>
-                )}
+                {/* Follow Stats — always rendered to prevent layout shift */}
+                <div className="flex items-center gap-8 text-sm" style={{ minHeight: 44 }}>
+                  {followStats ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowFollowList("followers")}
+                        className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
+                      >
+                        <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.followers}</span>
+                        <span className="text-[11px] text-muted-foreground">seguidores</span>
+                      </button>
+                      <div className="h-8 w-px bg-border/60" />
+                      <button
+                        type="button"
+                        onClick={() => setShowFollowList("following")}
+                        className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
+                      >
+                        <span className="text-lg font-bold tabular-nums text-card-foreground">{followStats.following}</span>
+                        <span className="text-[11px] text-muted-foreground">siguiendo</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="h-5 w-8 animate-pulse rounded bg-muted" />
+                        <div className="h-2.5 w-14 animate-pulse rounded bg-muted" />
+                      </div>
+                      <div className="h-8 w-px bg-border/60" />
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="h-5 w-8 animate-pulse rounded bg-muted" />
+                        <div className="h-2.5 w-12 animate-pulse rounded bg-muted" />
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2067,6 +2081,7 @@ export default function Dashboard() {
   const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -2245,8 +2260,11 @@ export default function Dashboard() {
     setPosting(true);
     setUploading(true);
     try {
+      const totalFiles = pendingMedia.length + pendingDocs.length;
+      setUploadProgress({ current: 0, total: totalFiles });
       const uploaded: UploadedMedia[] = [];
       const maxRetries = 2;
+      let filesUploaded = 0;
       for (const pm of pendingMedia) {
         let lastError = "";
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -2274,6 +2292,8 @@ export default function Dashboard() {
                 type: pm.type,
                 mime: pm.file.type || undefined,
               });
+              filesUploaded++;
+              setUploadProgress({ current: filesUploaded, total: totalFiles });
               break;
             } else {
               lastError = "Respuesta sin storageId";
@@ -2307,6 +2327,8 @@ export default function Dashboard() {
             const json = await result.json();
             if (json.storageId) {
               uploadedDocs.push({ storageId: json.storageId, name: doc.name, size: doc.size, mime: doc.file.type || undefined });
+              filesUploaded++;
+              setUploadProgress({ current: filesUploaded, total: totalFiles });
               break;
             }
           } catch (e) {
@@ -2630,7 +2652,7 @@ export default function Dashboard() {
                 </div>
                 <Button
                   size="sm"
-                  className="gap-1.5 px-5"
+                  className="gap-1.5 px-5 min-w-[120px]"
                   disabled={!isPostable || posting}
                   onClick={handlePost}
                 >
@@ -2639,7 +2661,11 @@ export default function Dashboard() {
                   ) : (
                     <Send className="h-3.5 w-3.5" />
                   )}
-                  {uploading ? "Subiendo…" : "Publicar"}
+                  {uploading
+                    ? uploadProgress.total > 1
+                      ? `Subiendo ${uploadProgress.current}/${uploadProgress.total}…`
+                      : "Subiendo…"
+                    : "Publicar"}
                 </Button>
               </div>
 

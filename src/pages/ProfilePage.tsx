@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -12,8 +12,10 @@ import {
   User,
   MoreHorizontal,
   Pencil,
+  X,
+  Play,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -154,6 +156,12 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const currentTitle = (currentUser as any)?.title ?? "";
   const currentBio = (currentUser as any)?.bio ?? "";
 
+  const followStats = useQuery(
+    api.follows.getFollowStats,
+    user?._id ? { userId: user._id } : "skip",
+  );
+  const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
+
   const stagger = (i: number) => ({
     initial: { opacity: 0, y: 12 },
     animate: { opacity: 1, y: 0 },
@@ -232,7 +240,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
 
-          {/* Name */}
+          {/* Name — primary, large, bold */}
           {editing ? (
             <div className="flex w-full max-w-xs items-center gap-2">
               <input
@@ -257,7 +265,57 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               </button>
             </div>
           ) : (
-            <p className="text-lg font-bold text-card-foreground">{user?.name ?? "Sin nombre"}</p>
+            <p className="text-xl font-extrabold tracking-tight text-card-foreground">{user?.name ?? "Sin nombre"}</p>
+          )}
+
+          {/* Title — secondary, italic */}
+          {editing ? (
+            <div className="flex w-full max-w-xs items-center gap-2">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={60}
+                placeholder="Título (opcional)"
+                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+              />
+              <button
+                type="button"
+                onClick={handleSaveTitle}
+                disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+              >
+                {savingTitle ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          ) : (
+            currentTitle && <p className="text-sm font-medium italic text-primary/80">{currentTitle}</p>
+          )}
+
+          {/* Follow stats — tappable counts */}
+          {followStats && (
+            <div className="flex items-center gap-6 text-sm">
+              <button
+                type="button"
+                onClick={() => setShowFollowList("followers")}
+                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <span className="font-semibold text-card-foreground tabular-nums">{followStats.followers}</span>
+                <span>seguidores</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFollowList("following")}
+                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <span className="font-semibold text-card-foreground tabular-nums">{followStats.following}</span>
+                <span>siguiendo</span>
+              </button>
+            </div>
           )}
 
           {/* Bio — inline editable */}
@@ -300,34 +358,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         )}
       
 
-          {/* Title */}
 
-          {editing ? (
-            <div className="flex w-full max-w-xs items-center gap-2">
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                maxLength={60}
-                placeholder="Título (opcional)"
-                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              />
-              <button
-                type="button"
-                onClick={handleSaveTitle}
-                disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-              >
-                {savingTitle ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          ) : (
-            currentTitle && <p className="text-sm text-muted-foreground">{currentTitle}</p>
-          )}
         </div>
       </motion.div>
 
@@ -356,7 +387,19 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {post.mediaUrls.map((m, i) =>
                       m.type === "video" ? (
-                        <video key={i} src={m.url} className="h-28 w-full rounded-xl object-cover" controls muted />
+                        <div key={i} className="relative h-28 w-full rounded-xl overflow-hidden bg-muted">
+                          <video
+                            src={m.url}
+                            className="h-full w-full object-contain"
+                            muted
+                            preload="metadata"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90">
+                              <Play className="ml-0.5 h-3.5 w-3.5" />
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         <img key={i} src={m.url} alt="" className="h-28 w-full rounded-xl object-cover" />
                       ),
@@ -371,6 +414,100 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           </div>
         </motion.div>
       )}
+      <AnimatePresence>
+        {showFollowList && user?._id && (
+          <FollowListModalInline
+            userId={user._id}
+            type={showFollowList}
+            onClose={() => setShowFollowList(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// ── Follow list modal (inline version for ProfilePage) ─────────────
+function FollowListModalInline({
+  userId,
+  type,
+  onClose,
+}: {
+  userId: string;
+  type: "followers" | "following";
+  onClose: () => void;
+}) {
+  const list = useQuery(
+    type === "followers" ? api.follows.getFollowers : api.follows.getFollowing,
+    { userId: userId as any },
+  );
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      className="fixed inset-0 z-[95] flex flex-col bg-background"
+    >
+      <div className="border-b border-border/50 bg-background px-4 py-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <h3 className="text-sm font-semibold">
+            {type === "followers" ? "Seguidores" : "Siguiendo"}
+          </h3>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {list === undefined ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          </div>
+        ) : list.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <User className="h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-3 text-xs text-muted-foreground">
+              {type === "followers"
+                ? "Todavía no tiene seguidores."
+                : "Todavía no sigue a nadie."}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/30">
+            {list.map((u) => (
+              <div key={u._id} className="flex items-center gap-3 px-5 py-3">
+                <Avatar className="h-10 w-10 shrink-0 border border-border/50">
+                  {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
+                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                    {getInitials(u.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium text-card-foreground">{u.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }

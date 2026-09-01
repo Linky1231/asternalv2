@@ -69,3 +69,56 @@ export const getFollowStats = query({
     };
   },
 });
+
+
+/** Get list of followers (users who follow this user). */
+export const getFollowers = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const follows = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q) => q.eq("followingId", args.userId))
+      .collect();
+
+    return await Promise.all(
+      follows.map(async (f) => {
+        const user = await ctx.db.get(f.followerId);
+        let imageUrl: string | undefined;
+        if (user?.image) {
+          imageUrl = (await ctx.storage.getUrl(user.image)) ?? undefined;
+        }
+        return {
+          _id: user?._id ?? f.followerId,
+          name: user?.name ?? "Anónimo",
+          imageUrl,
+        };
+      }),
+    );
+  },
+});
+
+/** Get list of users this user follows. */
+export const getFollowing = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const follows = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q) => q.eq("followerId", args.userId))
+      .collect();
+
+    return await Promise.all(
+      follows.map(async (f) => {
+        const user = await ctx.db.get(f.followingId);
+        let imageUrl: string | undefined;
+        if (user?.image) {
+          imageUrl = (await ctx.storage.getUrl(user.image)) ?? undefined;
+        }
+        return {
+          _id: user?._id ?? f.followingId,
+          name: user?.name ?? "Anónimo",
+          imageUrl,
+        };
+      }),
+    );
+  },
+});

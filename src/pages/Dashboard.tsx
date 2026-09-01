@@ -247,6 +247,37 @@ function useVideoObjectUrl(url: string, mime: string) {
   return objectUrl;
 }
 
+// ── Video thumbnail hook ────────────────────────────────────────
+function useVideoThumbnail(url: string): string | null {
+  const [thumb, setThumb] = useState<string | null>(null);
+  useEffect(() => {
+    if (!url) return;
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+    const revoke = () => { URL.revokeObjectURL(video.src); };
+    video.onloadeddata = () => {
+      video.currentTime = 0.5;
+    };
+    video.onseeked = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        setThumb(canvas.toDataURL("image/jpeg", 0.7));
+      }
+      revoke();
+    };
+    video.onerror = () => revoke();
+    video.src = url;
+    return revoke;
+  }, [url]);
+  return thumb;
+}
+
 // ── Selection formatting helper ────────────────────────────────────
 /**
  * Remove a specific style from all spans in a document fragment,
@@ -998,6 +1029,27 @@ function FormatToolbar() {
   );
 }
 
+// ── Video thumbnail component for previews ──────────────────────
+function VideoThumb({ src, alt }: { src: string; alt?: string }) {
+  const thumb = useVideoThumbnail(src);
+  return (
+    <div className="relative h-28 w-full bg-muted flex items-center justify-center overflow-hidden rounded-xl">
+      {thumb ? (
+        <img src={thumb} alt={alt ?? ""} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <span className="text-xs text-muted-foreground">Cargando…</span>
+        </div>
+      )}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90">
+          <Play className="ml-0.5 h-3.5 w-3.5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Post Card ──────────────────────────────────────────────────────
 function CommentItem({
   comment,
@@ -1721,6 +1773,91 @@ function CommentsModal({
   );
 }
 
+// ── Follow list modal ──────────────────────────────────────────
+function FollowListModal({
+  userId,
+  type,
+  onClose,
+}: {
+  userId: string;
+  type: "followers" | "following";
+  onClose: () => void;
+}) {
+  const list = useQuery(
+    type === "followers" ? api.follows.getFollowers : api.follows.getFollowing,
+    { userId: userId as any },
+  );
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      className="fixed inset-0 z-[95] flex flex-col bg-background"
+    >
+      <div className="border-b border-border/50 bg-background px-4 py-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <h3 className="text-sm font-semibold">
+            {type === "followers" ? "Seguidores" : "Siguiendo"}
+          </h3>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {list === undefined ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          </div>
+        ) : list.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <User className="h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-3 text-xs text-muted-foreground">
+              {type === "followers"
+                ? "Todavía no tiene seguidores."
+                : "Todavía no sigue a nadie."}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/30">
+            {list.map((u) => (
+              <div key={u._id} className="flex items-center gap-3 px-5 py-3">
+                <Avatar className="h-10 w-10 shrink-0 border border-border/50">
+                  {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
+                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                    {getInitials(u.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium text-card-foreground">{u.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
   { id: "forYou", label: "Para ti" },
   { id: "following", label: "Seguidos" },
@@ -1733,6 +1870,11 @@ const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
 function UserProfileView({ userId, onBack }: { userId: string; onBack: () => void }) {
   const userPosts = useQuery(api.posts.getUserPosts, { authorId: userId });
   const userData = userPosts && userPosts.length > 0 ? userPosts[0] : null;
+  const followStats = useQuery(
+    api.follows.getFollowStats,
+    { userId: userId as any },
+  );
+  const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -1753,26 +1895,49 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
       <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
         {userData ? (
           <div>
-            {/* Profile card + bio + separator + posts — all appear together */}
-            <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8 outline-none" style={{ borderColor: "var(--border)" }}>
+            {/* Profile card */}
+            <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8">
               <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-24 w-24 border-2 border-border/50 outline-none">
+                <Avatar className="h-24 w-24 border-2 border-border/50">
                   {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
                   <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                     {getInitials(userData.authorName)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-card-foreground">{userData.authorName}</p>
-                  {(userData as any).authorTitle && <p className="mt-0.5 text-sm text-muted-foreground">{(userData as any).authorTitle}</p>}
-                </div>
+                {/* Name — primary, large, bold */}
+                <p className="text-xl font-extrabold tracking-tight text-card-foreground">{userData.authorName}</p>
+                {/* Title — secondary, smaller, muted */}
+                {(userData as any).authorTitle && (
+                  <p className="text-sm font-medium italic text-primary/80">{(userData as any).authorTitle}</p>
+                )}
+                {/* Follow stats — tappable counts */}
+                {followStats && (
+                  <div className="flex items-center gap-6 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setShowFollowList("followers")}
+                      className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span className="font-semibold text-card-foreground tabular-nums">{followStats.followers}</span>
+                      <span>seguidores</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowFollowList("following")}
+                      className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span className="font-semibold text-card-foreground tabular-nums">{followStats.following}</span>
+                      <span>siguiendo</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Bio */}
             {(userData as any).authorBio && (
               <div className="mt-4 rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-                <h3 className="text-sm font-semibold text-card-foreground">Descripción</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
               </div>
             )}
 
@@ -1809,6 +1974,16 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showFollowList && (
+          <FollowListModal
+            userId={userId}
+            type={showFollowList}
+            onClose={() => setShowFollowList(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -2270,11 +2445,7 @@ export default function Dashboard() {
                       className="group relative overflow-hidden rounded-xl border border-border/40 bg-muted"
                     >
                       {pm.type === "video" ? (
-                        <video
-                          src={pm.preview}
-                          className="h-28 w-full object-contain"
-                          muted
-                        />
+                        <VideoThumb src={pm.preview} alt={pm.file.name} />
                       ) : (
                         <img
                           src={pm.preview}

@@ -16,7 +16,6 @@ import {
   Play,
   AlertTriangle,
   Palette,
-  Type,
   MessageCircle,
   Reply,
   Search,
@@ -70,12 +69,7 @@ const TEXT_COLORS = [
   { label: "Celeste", value: "#0891b2" },
 ];
 
-const HEADING_SIZES = [
-  { label: "Normal", value: "" },
-  { label: "H1", value: "24px" },
-  { label: "H2", value: "20px" },
-  { label: "H3", value: "17px" },
-];
+
 
 // ── Interfaces ─────────────────────────────────────────────────────
 interface PendingMedia {
@@ -849,11 +843,9 @@ function MediaGrid({
 // ── Format Toolbar ─────────────────────────────────────────────────
 function FormatToolbar() {
   const [showColors, setShowColors] = useState(false);
-  const [showSizes, setShowSizes] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRange = useRef<Range | null>(null);
-  const [activeSize, setActiveSize] = useState<string>("");
 
   const hasSelection = () => {
     const sel = window.getSelection();
@@ -895,7 +887,6 @@ function FormatToolbar() {
           size="sm"
           className={`gap-1.5 px-3 ${showColors ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
           onClick={() => {
-            setShowSizes(false);
             if (showColors) { setShowColors(false); return; }
             if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
             saveSelection();
@@ -907,44 +898,7 @@ function FormatToolbar() {
           <span className="text-xs font-medium whitespace-nowrap">Color</span>
         </Button>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={`gap-1.5 px-3 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
-          onClick={() => {
-            setShowColors(false);
-            if (showSizes) { setShowSizes(false); return; }
-            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            saveSelection();
-            // Detect current size from selection — walk up to find styled span
-            const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-              let node: Node | null = sel.getRangeAt(0).startContainer;
-              let found = false;
-              // Walk up from anchor to root looking for a fontSize span
-              let depth = 0;
-              while (node && depth < 20) {
-                depth++;
-                if (node instanceof HTMLElement && node.tagName === "SPAN") {
-                  const fs = node.style.fontSize;
-                  if (fs === "24px" || fs === "20px" || fs === "17px") {
-                    setActiveSize(fs);
-                    found = true;
-                    break;
-                  }
-                }
-                node = node.parentNode;
-              }
-              if (!found) setActiveSize("");
-            }
-            setShowSizes(true);
-          }}
-          title="Tamaño del texto"
-        >
-          <Type className="h-4 w-4 shrink-0" />
-          <span className="text-xs font-medium whitespace-nowrap">Tamaño</span>
-        </Button>
+
 
         {/* Bold */}
         <Button
@@ -1039,51 +993,7 @@ function FormatToolbar() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showSizes && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="mt-2 flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Encabezado</span>
-              <div className="flex gap-1">
-                {HEADING_SIZES.map((s) => {
-                  const isDefault = !s.value;
-                  const isActive = activeSize === s.value;
-                  return (
-                    <button
-                      key={s.label}
-                      type="button"
-                      className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        // Update state first (re-render closes panel)
-                        const nextSize = isDefault ? "" : s.value;
-                        setActiveSize(nextSize);
-                        setShowSizes(false);
-                        requestAnimationFrame(() => {
-                          restoreSelection();
-                          removeStyleFromSelection("fontSize");
-                          if (!isDefault) {
-                            applyStyleToSelection("fontSize", s.value);
-                          }
-                        });
-                      }}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowSizes(false)}><X className="h-3 w-3" /></button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
     </div>
   );
 }

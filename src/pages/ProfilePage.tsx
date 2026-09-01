@@ -1,6 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import {
+  updateProfile,
+  uploadFile,
+  generateFilePath,
+  getStorageUrl,
+  getUserProfile,
+  getFollowStats,
+  getFollowers,
+  getFollowing,
+} from "@/lib/db";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -54,17 +62,22 @@ interface ProfilePageProps {
 
 export default function ProfilePage({ onBack }: ProfilePageProps) {
   const { user, signOut } = useAuth();
-  const updateProfile = useMutation(api.users.updateProfile);
-  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
-  const currentUser = useQuery(api.users.currentUser);
-  const avatarUrl = useQuery(
-    api.users.getAvatarUrl,
-    currentUser?.image ? { storageId: currentUser.image } : "skip",
-  );
-  const userPosts = useQuery(
-    api.posts.getUserPosts,
-    user?._id ? { authorId: user._id } : "skip",
-  );
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userPosts, setUserPosts] = useState<any[] | undefined>(undefined);
+  
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?._id) return;
+      try {
+        const data = await getUserProfile(user._id, user._id);
+        setCurrentUser(data);
+        setUserPosts(data?.posts || []);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+    };
+    fetchProfile();
+  }, [user?._id]);
 
   // Inline edit state
   const [editing, setEditing] = useState(false);
@@ -100,7 +113,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     if (!editName.trim() || editName.trim() === (user?.name ?? "") || savingName) return;
     setSavingName(true);
     try {
-      await updateProfile({ name: editName.trim() });
+      await updateProfile(user?._id || '', { name: editName.trim() });
       setSavedName(true);
       setTimeout(() => setSavedName(false), 2000);
     } catch (err) {
@@ -115,7 +128,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     if (editTitle === currentTitle || savingTitle) return;
     setSavingTitle(true);
     try {
-      await updateProfile({ title: editTitle.trim() || undefined });
+      await updateProfile(user?._id || '', { title: editTitle.trim() || undefined });
       setSavedTitle(true);
       setTimeout(() => setSavedTitle(false), 2000);
     } catch (err) {
@@ -130,7 +143,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     if (editBio === currentBio || savingBio) return;
     setSavingBio(true);
     try {
-      await updateProfile({ bio: editBio.trim() || undefined });
+      await updateProfile(user?._id || '', { bio: editBio.trim() || undefined });
       setSavedBio(true);
       setTimeout(() => setSavedBio(false), 2000);
     } catch (err) {
@@ -148,7 +161,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       if (file.size > 5 * 1024 * 1024) return;
       setSavingAvatar(true);
       try {
-        const url = await generateUploadUrl();
+        const path = generateFilePath(user?._id || '', file.name, 'avatars');
         const result = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": file.type },
@@ -157,7 +170,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         if (!result.ok) throw new Error(`HTTP ${result.status}`);
         const json = await result.json();
         if (json.storageId) {
-          await updateProfile({ image: json.storageId });
+          await updateProfile(user?._id || '', { image: path });
         }
       } catch (err) {
         console.error("Error al subir avatar:", err);
@@ -166,16 +179,25 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         e.target.value = "";
       }
     },
-    [savingAvatar, generateUploadUrl, updateProfile],
+    [savingAvatar, updateProfile, user?._id],
   );
 
   const currentTitle = (currentUser as any)?.title ?? "";
   const currentBio = (currentUser as any)?.bio ?? "";
 
-  const followStats = useQuery(
-    api.follows.getFollowStats,
-    user?._id ? { userId: user._id as any } : "skip",
-  );
+  const [followStats, setFollowStats] = useState<{ followers: number; following: number } | undefined>(undefined);
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?._id) return;
+      try {
+        const data = await getFollowStats(user._id);
+        setFollowStats(data);
+      } catch (error) {
+        console.error("Error fetching follow stats:", error);
+      }
+    };
+    fetchStats();
+  }, [user?._id]);
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
   const stagger = (i: number) => ({
@@ -242,7 +264,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           {/* Avatar */}
           <div className="relative">
             <Avatar className="h-24 w-24 border-2 border-border/50">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.name ?? ""} />}
+              {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={user?.name ?? ""} />}
               <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                 {user?.name ? getInitials(user.name) : <User className="h-10 w-10" />}
               </AvatarFallback>
@@ -500,10 +522,19 @@ function FollowListModalInline({
   type: "followers" | "following";
   onClose: () => void;
 }) {
-  const list = useQuery(
-    type === "followers" ? api.follows.getFollowers : api.follows.getFollowing,
-    { userId: userId as any },
-  );
+  const [list, setList] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchList = async () => {
+      if (!user?._id) return;
+      try {
+        const data = type === "followers" ? await getFollowers(user._id) : await getFollowing(user._id);
+        setList(data);
+      } catch (error) {
+        console.error("Error fetching follow list:", error);
+      }
+    };
+    fetchList();
+  }, [type, user?._id]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

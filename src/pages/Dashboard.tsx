@@ -1,8 +1,27 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import ProfilePage from "./ProfilePage";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  getPosts,
+  createPost as createPostFn,
+  deletePost,
+  deletePostAsAdmin,
+  togglePostLike,
+  togglePostFavorite,
+  searchUsers,
+  getComments,
+  createComment,
+  toggleCommentLike,
+  deleteComment,
+  toggleFollow,
+  isFollowing,
+  getFollowStats,
+  getFollowers,
+  getFollowing,
+  getUserProfile,
+  uploadFile,
+  generateFilePath,
+} from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -1049,11 +1068,26 @@ function CommentItem({
   depth?: number;
 }) {
   const pid = postId as any;
-  const toggleCommentLike = useMutation(api.comments.toggleLike);
-  const removeComment = useMutation(api.comments.remove);
+  const toggleCommentLikeHandler = async (commentId: string) => {
+    // Will be passed as prop or use direct Supabase call
+  };
+  const removeCommentHandler = async (commentId: string) => {
+    // Will be passed as prop or use direct Supabase call
+  };
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const comments = useQuery(api.comments.list, { postId: pid }) ?? [];
+  const [comments, setComments] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const data = await getComments(postId);
+        setComments(data);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
+    fetchComments();
+  }, [postId]);
   const replies = comments.filter((c) => c.parentCommentId === comment._id);
   const [showReplies, setShowReplies] = useState(replies.length <= 3);
 
@@ -1077,7 +1111,7 @@ function CommentItem({
               whileTap={{ scale: 0.85 }}
               whileHover={{ scale: 1.1 }}
               transition={{ type: "spring", stiffness: 300, damping: 24 }}
-              onClick={() => toggleCommentLike({ commentId: comment._id as any })}
+              onClick={async () => { if (currentUserId) await toggleCommentLike(currentUserId, comment._id); }}
               className={`flex items-center gap-1 text-[10px] transition-colors ${
                 comment.likedByMe ? "text-primary" : "text-muted-foreground hover:text-primary"
               }`}
@@ -1186,7 +1220,7 @@ function CommentItem({
                   variant="destructive"
                   size="sm"
                   onClick={() => {
-                    removeComment({ commentId: comment._id as any });
+                    deleteComment(comment._id, currentUserId || "");
                     setConfirmDelete(false);
                   }}
                   className="gap-1.5"
@@ -1243,14 +1277,32 @@ function PostCard({
   onOpenProfile: (userId: string) => void;
   postNumber?: number;
 }) {
-  const comments = useQuery(api.comments.list, { postId: post._id as any }) ?? [];
+  const [comments, setComments] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const data = await getComments(post._id);
+        setComments(data);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
+    fetchComments();
+  }, [post._id]);
   const commentCount = comments.length;
-  const isFollowingUser = useQuery(
-    api.follows.isFollowing,
-    post.authorId && currentUserId && post.authorId !== currentUserId
-      ? { userId: post.authorId as any }
-      : "skip",
-  );
+  const [isFollowingUser, setIsFollowingUser] = useState(false);
+  useEffect(() => {
+    const checkFollow = async () => {
+      if (!currentUserId || !post.authorId || post.authorId === currentUserId) return;
+      try {
+        const data = await isFollowing(currentUserId, post.authorId);
+        setIsFollowingUser(data);
+      } catch (error) {
+        console.error("Error checking follow status:", error);
+      }
+    };
+    checkFollow();
+  }, [currentUserId, post.authorId]);
 
   return (
     <motion.div
@@ -1456,7 +1508,18 @@ function MentionPicker({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const allUsers = useQuery(api.users.search, { query: searchQuery }) ?? [];
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  useEffect(() => {
+    const searchUsersHandler = async () => {
+      try {
+        const data = await searchUsers(searchQuery);
+        setAllUsers(data);
+      } catch (error) {
+        console.error("Error searching users:", error);
+      }
+    };
+    searchUsersHandler();
+  }, [searchQuery]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -1579,8 +1642,26 @@ function CommentsModal({
   onClose: () => void;
 }) {
   const pid = post._id as any;
-  const comments = useQuery(api.comments.list, { postId: pid }) ?? [];
-  const createComment = useMutation(api.comments.create);
+  const [comments, setComments] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const data = await getComments(post._id);
+        setComments(data);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
+    fetchComments();
+  }, [post._id]);
+  const createCommentHandler = async (targetPostId: string, commentContent: string, parentCommentId?: string) => {
+    if (!currentUserId) return;
+    try {
+      await createComment(targetPostId, currentUserId, commentContent, parentCommentId);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+    }
+  };
   const [commentText, setCommentText] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -1609,11 +1690,7 @@ function CommentsModal({
     if (!commentText.trim() || sending) return;
     setSending(true);
     try {
-      await createComment({
-        postId: pid,
-        content: commentText.trim(),
-        parentCommentId: replyTo?.id as any,
-      });
+      await createComment(pid, currentUserId || "", commentText.trim(), replyTo?.id || undefined);
       setCommentText("");
       setReplyTo(null);
       requestAnimationFrame(() => {
@@ -1766,10 +1843,18 @@ function FollowListModal({
   type: "followers" | "following";
   onClose: () => void;
 }) {
-  const list = useQuery(
-    type === "followers" ? api.follows.getFollowers : api.follows.getFollowing,
-    { userId: userId as any },
-  );
+  const [list, setList] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchList = async () => {
+      try {
+        const data = type === "followers" ? await getFollowers(userId) : await getFollowing(userId);
+        setList(data);
+      } catch (error) {
+        console.error("Error fetching follow list:", error);
+      }
+    };
+    fetchList();
+  }, [type, userId]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -1851,12 +1936,32 @@ const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
 // User Profile View (viewing another user's profile)
 // ═══════════════════════════════════════════════════════════════════
 function UserProfileView({ userId, onBack }: { userId: string; onBack: () => void }) {
-  const userPosts = useQuery(api.posts.getUserPosts, { authorId: userId });
+  const { user } = useAuth();
+  const [userPosts, setUserPosts] = useState<any[] | undefined>(undefined);
+  useEffect(() => {
+    const fetchUserPosts = async () => {
+      try {
+        const data = await getUserProfile(userId, user?._id);
+        setUserPosts(data?.posts || []);
+      } catch (error) {
+        console.error("Error fetching user posts:", error);
+      }
+    };
+    fetchUserPosts();
+  }, [userId, user?._id]);
   const userData = userPosts && userPosts.length > 0 ? userPosts[0] : null;
-  const followStats = useQuery(
-    api.follows.getFollowStats,
-    { userId: userId as any },
-  );
+  const [followStats, setFollowStats] = useState<{ followers: number; following: number } | undefined>(undefined);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await getFollowStats(userId);
+        setFollowStats(data);
+      } catch (error) {
+        console.error("Error fetching follow stats:", error);
+      }
+    };
+    fetchStats();
+  }, [userId]);
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
   return (
@@ -2035,14 +2140,25 @@ export default function Dashboard() {
   const isAdmin = (user as any)?.role === "admin";
   const [currentView, setCurrentView] = useState<"feed" | "profile" | "userProfile">("feed");
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
-  const posts = useQuery(api.posts.list, { sortBy: activeTab });
-  const createPost = useMutation(api.posts.create);
-  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
-  const toggleLikeMutation = useMutation(api.posts.toggleLike);
-  const toggleFavoriteMutation = useMutation(api.posts.toggleFavorite);
-  const toggleFollowMutation = useMutation(api.follows.toggleFollow);
-  const deletePost = useMutation(api.posts.remove);
-  const deletePostAsAdmin = useMutation(api.users.deletePostAsAdmin);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  
+  // Fetch posts when activeTab changes
+  useEffect(() => {
+    const fetchPosts = async () => {
+      if (!user?._id) return;
+      setLoadingPosts(true);
+      try {
+        const data = await getPosts(activeTab, user._id);
+        setPosts(data);
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
+    fetchPosts();
+  }, [activeTab, user?._id]);
 
   const [content, setContent] = useState("");
   const [postTitle, setPostTitle] = useState("");
@@ -2238,8 +2354,8 @@ export default function Dashboard() {
         let lastError = "";
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
-            const url = await generateUploadUrl();
-            const result = await fetch(url, {
+            const path = generateFilePath(user?._id || "", "upload", "media");
+            const result = await fetch(path, {
               method: "POST",
               headers: {
                 "Content-Type": pm.file.type || "application/octet-stream",
@@ -2286,8 +2402,8 @@ export default function Dashboard() {
         let docError = "";
         for (let attempt = 0; attempt <= 2; attempt++) {
           try {
-            const url = await generateUploadUrl();
-            const result = await fetch(url, {
+            const path = generateFilePath(user?._id || "", "upload", "media");
+            const result = await fetch(path, {
               method: "POST",
               headers: { "Content-Type": doc.file.type || "application/octet-stream" },
               body: doc.file,
@@ -2309,9 +2425,8 @@ export default function Dashboard() {
 
       // Send HTML content (or empty string if no text)
       const contentToSend = textOnly ? html.trim() : "";
-      await createPost({
+      await createPostFn(user?._id || "", contentToSend, {
         title: postTitle.trim() || undefined,
-        content: contentToSend,
         media:
           uploaded.length > 0 ? (uploaded as any) : undefined,
         documents:
@@ -2337,14 +2452,23 @@ export default function Dashboard() {
 
   const handleToggleLike = async (postId: string) => {
     try {
-      await toggleLikeMutation({ postId: postId as any });
+      await togglePostLike(user?._id || "", postId);
     } catch (err) {
       console.error("Error al dar me gusta:", err);
     }
   };
+  const handleToggleFollow = useCallback(async (targetUserId: string) => {
+    if (!user?._id) return;
+    try {
+      await toggleFollow(user._id, targetUserId);
+    } catch (error) {
+      console.error("Error toggling follow:", error);
+    }
+  }, [user?._id]);
+
   const handleToggleFavorite = async (postId: string) => {
     try {
-      await toggleFavoriteMutation({ postId: postId as any });
+      await togglePostFavorite(user?._id || "", postId);
     } catch (err) {
       console.error("Error al marcar favorito:", err);
     }
@@ -2353,9 +2477,9 @@ export default function Dashboard() {
     if (!deleteTarget) return;
     try {
       if (isAdmin) {
-        await deletePostAsAdmin({ postId: deleteTarget as any });
+        await deletePostAsAdmin(deleteTarget);
       } else {
-        await deletePost({ postId: deleteTarget as any });
+        await deletePost(deleteTarget, user?._id || "");
       }
     } catch (err) {
       console.error("Error al eliminar:", err);
@@ -2365,7 +2489,7 @@ export default function Dashboard() {
   const handleConfirmUnfollow = async () => {
     if (!unfollowTarget) return;
     try {
-      await toggleFollowMutation({ userId: unfollowTarget.userId as any });
+      await toggleFollow(user?._id || "", unfollowTarget.userId);
     } catch (err) {
       console.error("Error al dejar de seguir:", err);
     }
@@ -2740,7 +2864,7 @@ export default function Dashboard() {
                   currentUserId={user?._id}
                   onToggleLike={handleToggleLike}
                   onToggleFavorite={handleToggleFavorite}
-                  onFollow={(userId) => toggleFollowMutation({ userId: userId as any })}
+                  onFollow={(userId) => handleToggleFollow(userId)}
                   onRequestUnfollow={(userId, name) => setUnfollowTarget({ userId, name })}
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}

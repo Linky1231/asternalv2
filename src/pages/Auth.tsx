@@ -27,7 +27,7 @@ function resolveRedirectAfterAuth(
 }
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn, register } = useAuth();
+  const { loading: authLoading, isAuthenticated, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -55,7 +55,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      await signIn(username, password);
+      await signIn({ username, password });
       navigate(redirect);
     } catch (err) {
       setError(
@@ -76,7 +76,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
     setIsLoading(true);
     try {
-      await register(username, password, displayName || undefined);
+      await signUp({ username, password, name: displayName || undefined });
       navigate(redirect);
     } catch (err) {
       setError(

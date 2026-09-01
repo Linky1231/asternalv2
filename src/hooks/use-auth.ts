@@ -1,173 +1,221 @@
-import { api } from "@/convex/_generated/api";
-import { useDegradedMode } from "@/components/ConvexGraceful";
-import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation, useQuery } from "convex/react";
-import { useCallback, useRef, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  getCurrentUser,
+  loginUser,
+  registerUser,
+  logoutUser,
+} from "@/lib/db";
 
-interface StoredUser {
+interface User {
   _id: string;
   name: string;
   username?: string;
   email?: string;
   image?: string;
-  avatarUrl?: string;
   role?: string;
+  isAuthenticated: boolean;
 }
 
 const AUTH_STORAGE_KEY = "asternal_auth";
 
-function getStoredUser(): StoredUser | null {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-function setStoredUser(user: StoredUser | null) {
-  if (user) {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-  } else {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-  }
-}
+// Simple in-memory cache for current user
+let currentUserCache: User | null = null;
+let authStateChecked = false;
 
 export function useAuth() {
-  const { isDegraded, degradedUser } = useDegradedMode();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // ── ALL hooks must be called unconditionally (Rules of Hooks) ──
-  let currentUser: any = undefined;
-  let registerMutation: any = async () => {};
-  let loginMutation: any = async () => {};
-  let authActions: any = { signIn: async () => {}, signOut: async () => {} };
-
-  try {
-    currentUser = useQuery(api.users.currentUser);
-  } catch {
-    /* Convex unavailable */
-  }
-  try {
-    registerMutation = useMutation(api.users.register);
-  } catch {
-    /* Convex unavailable */
-  }
-  try {
-    loginMutation = useMutation(api.users.login);
-  } catch {
-    /* Convex unavailable */
-  }
-  try {
-    authActions = useAuthActions();
-  } catch {
-    /* Convex auth unavailable */
-  }
-
-  const loginRef = useRef(loginMutation);
-  loginRef.current = loginMutation;
-  const registerRef = useRef(registerMutation);
-  registerRef.current = registerMutation;
-  const authRef = useRef(authActions);
-  authRef.current = authActions;
-
-  const [storedUser, setStoredUserState] = useState<StoredUser | null>(
-    getStoredUser,
-  );
-
-  const signIn = useCallback(
-    async (username: string, password: string) => {
-      // 1. Verify credentials via our custom mutation
-      const result = await loginRef.current({ username, password });
-      const userData: StoredUser = {
-        _id: result._id as string,
-        name: result.name,
-        username: result.username,
-        email: result.email,
-        image: result.image,
-        avatarUrl: result.avatarUrl,
-        role: result.role,
-      };
-
-      // 2. Establish a Convex anonymous session so backend getAuthUserId works
+  // Check for cached user on mount
+  useEffect(() => {
+    const checkAuth = async () => {
       try {
-        await authRef.current.signIn("anonymous");
-      } catch {
-        // Anonymous sign-in may fail in degraded mode — that's OK
+        // First check Supabase session
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          // Get full profile from database
+          const profile = await getCurrentUser();
+          if (profile) {
+            const userData: User = {
+              _id: profile.id,
+              name: profile.name || "Anónimo",
+              username: profile.username,
+              email: profile.email,
+              image: profile.image,
+              role: profile.role,
+              isAuthenticated: true,
+            };
+            currentUserCache = userData;
+            setUser(userData);
+            // Cache in localStorage
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+          }
+        } else {
+          // No session, check localStorage cache
+          const cached = localStorage.getItem(AUTH_STORAGE_KEY);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            // Verify the cached user still exists
+            try {
+              const profile = await getCurrentUser();
+              if (profile && profile.id === parsed._id) {
+                currentUserCache = parsed;
+                setUser(parsed);
+              } else {
+                // Cached user no longer valid
+                localStorage.removeItem(AUTH_STORAGE_KEY);
+                currentUserCache = null;
+                setUser(null);
+              }
+            } catch {
+              // Can't verify, use cache
+              currentUserCache = parsed;
+              setUser(parsed);
+            }
+          } else {
+            currentUserCache = null;
+            setUser(null);
+          }
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        // Use cache on error
+        const cached = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          currentUserCache = parsed;
+          setUser(parsed);
+        }
+      } finally {
+        setLoading(false);
+        authStateChecked = true;
       }
+    };
 
-      setStoredUserState(userData);
-      setStoredUser(userData);
-      return userData;
-    },
-    [],
-  );
-
-  const register = useCallback(
-    async (username: string, password: string, name?: string) => {
-      // 1. Create user in users table
-      const result = await registerRef.current({ username, password, name });
-      const userData: StoredUser = {
-        _id: result._id as string,
-        name: result.name,
-        username: result.username,
-      };
-
-      // 2. Establish a Convex anonymous session
-      try {
-        await authRef.current.signIn("anonymous");
-      } catch {
-        // OK in degraded mode
-      }
-
-      setStoredUserState(userData);
-      setStoredUser(userData);
-      return userData;
-    },
-    [],
-  );
-
-  const signOut = useCallback(() => {
-    setStoredUserState(null);
-    setStoredUser(null);
-    // Also sign out from Convex auth
-    try {
-      authRef.current.signOut();
-    } catch {
-      // ignore
+    if (!authStateChecked) {
+      checkAuth();
+    } else {
+      setLoading(false);
     }
-    window.location.href = "/";
+
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        const profile = await getCurrentUser();
+        if (profile) {
+          const userData: User = {
+            _id: profile.id,
+            name: profile.name || "Anónimo",
+            username: profile.username,
+            email: profile.email,
+            image: profile.image,
+            role: profile.role,
+            isAuthenticated: true,
+          };
+          currentUserCache = userData;
+          setUser(userData);
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+        }
+      } else if (event === "SIGNED_OUT") {
+        currentUserCache = null;
+        setUser(null);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // ── Conditional logic AFTER all hooks ────────────────────────
+  const signIn = useCallback(
+    async (credentials?: { username?: string; password?: string }) => {
+      if (!credentials?.username || !credentials?.password) {
+        throw new Error("Se requiere nombre de usuario y contraseña");
+      }
 
-  if (isDegraded) {
-    return {
-      isLoading: false,
-      isAuthenticated: true,
-      user: degradedUser ?? {
-        _id: "anonymous",
-        name: "Anónimo",
-        email: "",
-        tokenIdentifier: "anonymous",
-      },
-      signIn: async () => {},
-      signOut: async () => {},
-      register: async () => {},
-    };
-  }
+      try {
+        const result = await loginUser(
+          credentials.username,
+          credentials.password
+        );
+        const userData: User = {
+          _id: result._id,
+          name: result.name,
+          username: result.username,
+          email: result.email,
+          image: result.image,
+          role: result.role,
+          isAuthenticated: true,
+        };
+        currentUserCache = userData;
+        setUser(userData);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+        return userData;
+      } catch (error) {
+        throw error;
+      }
+    },
+    []
+  );
 
-  // Normal mode — prefer Convex data, fall back to stored data
-  const user = currentUser ?? storedUser;
-  const isLoading = currentUser === undefined && storedUser === null;
-  const isAuthenticated = user !== null;
+  const signUp = useCallback(
+    async (credentials?: {
+      username?: string;
+      password?: string;
+      name?: string;
+    }) => {
+      if (!credentials?.username || !credentials?.password) {
+        throw new Error("Se requiere nombre de usuario y contraseña");
+      }
+
+      try {
+        const result = await registerUser(
+          credentials.username,
+          credentials.password,
+          credentials.name
+        );
+        const userData: User = {
+          _id: result._id,
+          name: result.name,
+          username: result.username,
+          isAuthenticated: true,
+        };
+        currentUserCache = userData;
+        setUser(userData);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+        return userData;
+      } catch (error) {
+        throw error;
+      }
+    },
+    []
+  );
+
+  const signOut = useCallback(async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      currentUserCache = null;
+      setUser(null);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+  }, []);
 
   return {
-    isLoading,
-    isAuthenticated,
     user,
+    loading,
     signIn,
+    signUp,
     signOut,
-    register,
+    isAuthenticated: user?.isAuthenticated ?? false,
   };
 }

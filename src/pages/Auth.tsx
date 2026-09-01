@@ -116,25 +116,18 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
       <div className="flex-1 flex items-center justify-center px-4 pt-14">
         <div className="w-full max-w-sm">
-          {/* ── Logo & Brand ─────────────────────────── */}
+          {/* ── Brand ──────────────────────────────── */}
           <motion.div
-            className="text-center mb-8"
+            className="text-center mb-6"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.32, 0.72, 0, 1] }}
           >
-            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/8">
-              <img
-                src="/assets/67385.png"
-                alt="Asternal"
-                className="h-14 w-14 rounded-2xl object-contain"
-              />
-            </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Asternal
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              Plataforma de desarrollo de videojuegos y comunidad GameDev
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Tu espacio de desarrollo GameDev
             </p>
           </motion.div>
 
@@ -156,7 +149,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   >
                     <CardHeader className="pb-4">
                       <CardTitle className="text-center text-lg">
-                        Iniciar sesión
+                        Bienvenido de vuelta
                       </CardTitle>
                     </CardHeader>
                     <form onSubmit={handleLogin}>
@@ -246,7 +239,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   >
                     <CardHeader className="pb-4">
                       <CardTitle className="text-center text-lg">
-                        Crear cuenta
+                        Únete a Asternal
                       </CardTitle>
                     </CardHeader>
                     <form onSubmit={handleRegister}>

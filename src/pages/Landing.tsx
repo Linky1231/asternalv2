@@ -44,7 +44,7 @@ export default function Landing() {
         </div>
       </nav>
 
-      <section className="relative flex min-h-screen items-center justify-center px-6 pt-20 pb-16">
+      <section className="relative flex min-h-[85vh] items-center justify-center px-6 pt-20 pb-8">
         <div className="mx-auto max-w-4xl text-center">
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
@@ -102,7 +102,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="relative border-t border-border/50 bg-muted/30 py-32">
+      <section className="relative border-t border-border/50 bg-muted/30 py-24">
         <div className="mx-auto max-w-6xl px-6">
           <motion.div
             className="text-center"

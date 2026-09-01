@@ -32,7 +32,7 @@ export default function DegradedDashboard() {
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <img
-              src="/67385.png"
+              src="/assets/67385.png"
               alt="Asternal"
               className="h-7 w-7 rounded-lg object-contain"
             />

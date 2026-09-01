@@ -112,7 +112,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             transition={{ duration: 0.5, delay: 0.1, ease: [0.32, 0.72, 0, 1] }}
           >
             <img
-              src="/67385.png"
+              src="/assets/67385.png"
               alt="Asternal"
               className="mx-auto h-14 w-14 rounded-2xl object-contain mb-4"
             />

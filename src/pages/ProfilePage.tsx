@@ -14,6 +14,7 @@ import {
   Pencil,
   X,
   Play,
+  Share2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -163,9 +164,9 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
   const stagger = (i: number) => ({
-    initial: { opacity: 0, y: 12 },
+    initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.3, delay: i * 0.05, ease: [0.25, 0.1, 0.25, 1] as const },
+    transition: { duration: 0.35, delay: i * 0.06, ease: [0.32, 0.72, 0, 1] as const },
   });
 
   return (
@@ -203,10 +204,17 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onClick={handleEnterEdit} className="gap-2 text-sm">
                 <Pencil className="h-3.5 w-3.5" />
                 Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { /* Compartir perfil — funcionalidad pendiente */ }}
+                className="gap-2 text-sm"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Compartir perfil
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

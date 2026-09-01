@@ -443,7 +443,7 @@ function Lightbox({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
       onClick={onClose}
     >
@@ -497,7 +497,7 @@ function Lightbox({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
             >
               <LightboxVideo url={current.url} mime={current.mime} />
             </motion.div>
@@ -533,14 +533,14 @@ function DeleteConfirmDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
           className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 8 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
             className="mx-4 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -595,14 +595,14 @@ function UnfollowConfirmDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
           className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 8 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
             className="mx-4 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -969,7 +969,7 @@ function FormatToolbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
           >
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
@@ -1014,7 +1014,7 @@ function FormatToolbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
           >
             <div className="mt-2 flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
@@ -1139,7 +1139,7 @@ function CommentItem({
               type="button"
               whileTap={{ scale: 0.85 }}
               whileHover={{ scale: 1.1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 18 }}
+              transition={{ type: "spring", stiffness: 300, damping: 24 }}
               onClick={() => toggleCommentLike({ commentId: comment._id as any })}
               className={`flex items-center gap-1 text-[10px] transition-colors ${
                 comment.likedByMe ? "text-primary" : "text-muted-foreground hover:text-primary"
@@ -1197,7 +1197,7 @@ function CommentItem({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                 >
                   <CommentItem
                     comment={reply}
@@ -1219,14 +1219,14 @@ function CommentItem({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: 6 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 6 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
               className="mx-4 w-full max-w-xs rounded-2xl border border-border/60 bg-card p-5 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1321,7 +1321,7 @@ function PostCard({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-200 hover:border-border/80 hover:shadow-sm"
+      className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 ease-out hover:border-border/80 hover:shadow-sm"
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
@@ -1346,7 +1346,7 @@ function PostCard({
                   type="button"
                   whileTap={{ scale: 0.92 }}
                   whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
                   onClick={() => isFollowingUser ? onRequestUnfollow(post.authorId, post.authorName) : onFollow(post.authorId)}
                   className={`ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-md border transition-colors ${
                     isFollowingUser
@@ -1419,7 +1419,7 @@ function PostCard({
             type="button"
             whileTap={{ scale: 0.88 }}
             whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 24 }}
             onClick={() => onToggleLike(post._id)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
               post.likedByMe
@@ -1448,7 +1448,7 @@ function PostCard({
             type="button"
             whileTap={{ scale: 0.88 }}
             whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 24 }}
             onClick={() => onToggleFavorite(post._id)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               post.favoritedByMe
@@ -1470,7 +1470,7 @@ function PostCard({
             type="button"
             whileTap={{ scale: 0.88 }}
             whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 24 }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Share2 className="h-4 w-4" />
@@ -1481,7 +1481,7 @@ function PostCard({
               type="button"
               whileTap={{ scale: 0.9 }}
               whileHover={{ scale: 1.1, color: "var(--destructive)" }}
-              transition={{ type: "spring", stiffness: 500, damping: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 24 }}
               onClick={() => onRequestDelete(post._id)}
               className="ml-auto rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive"
             >
@@ -1497,7 +1497,7 @@ function PostCard({
           type="button"
           whileTap={{ scale: 0.97 }}
           whileHover={{ backgroundColor: "var(--muted)" }}
-          transition={{ type: "spring", stiffness: 500, damping: 20 }}
+          transition={{ type: "spring", stiffness: 300, damping: 24 }}
           onClick={() => onOpenComments({ ...post, postNumber: postNumber ?? 0 })}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
         >
@@ -1747,7 +1747,7 @@ function CommentsModal({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
                   className="rounded-xl border border-border/40 bg-card/50 px-3 py-2"
                 >
                   <CommentItem
@@ -1772,7 +1772,7 @@ function CommentsModal({
               initial={{ opacity: 0, height: 0, marginTop: 0 }}
               animate={{ opacity: 1, height: "auto", marginTop: 8 }}
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
               className="overflow-hidden text-[10px] text-muted-foreground"
             >
               <div className="flex items-center gap-1.5">
@@ -1935,6 +1935,16 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
             <ArrowLeft className="h-4 w-4" />
           </button>
           <span className="text-sm font-semibold">{userData?.authorName ?? "Perfil"}</span>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => { /* Compartir perfil — funcionalidad pendiente */ }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Compartir perfil"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2471,20 +2481,20 @@ export default function Dashboard() {
           {currentView === "userProfile" ? (
             <motion.div
               key="userProfile"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
             >
               <UserProfileView userId={viewingUserId!} onBack={() => { setCurrentView("feed"); setViewingUserId(null); }} />
             </motion.div>
           ) : currentView === "profile" ? (
             <motion.div
               key="profile"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
             >
               <ProfilePage onBack={() => setCurrentView("feed")} />
             </motion.div>
@@ -2700,7 +2710,7 @@ export default function Dashboard() {
                   <motion.div
                     layoutId="activeTab"
                     className="absolute bottom-0 left-1/2 h-0.5 w-[calc(100%-1.5rem)] -translate-x-1/2 bg-primary"
-                    transition={{ type: "spring", stiffness: 600, damping: 40 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
               </button>

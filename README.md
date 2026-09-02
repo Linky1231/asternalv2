@@ -3,15 +3,13 @@
 This project uses the following tech stack:
 - Vite
 - Typescript
-- React Router v7 (all imports from `react-router` instead of `react-router-dom`)
+- TanStack Start (file-based routing with TanStack Router)
 - React 19 (for frontend components)
 - Tailwind v4 (for styling)
 - Shadcn UI (for UI components library)
 - Lucide Icons (for icons)
-- Convex (for backend & database)
-- Convex Auth (for authentication)
+- Supabase (for backend, database, authentication, and storage)
 - Framer Motion (for animations)
-- Three js (for 3d models)
 
 All relevant files live in the 'src' directory.
 
@@ -19,16 +17,11 @@ Use bun for the package manager.
 
 ## Setup
 
-This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
+This project is set up already and running on a cloud environment with Supabase as the backend.
 
 ## Environment Variables
 
-The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
-
-The convex server has a separate set of environment variables that are accessible by the convex backend.
-
-Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
-
+The project uses Supabase for backend services. Environment variables are managed through the platform's Keys/API keys UI.
 
 # Using Authentication (Important!)
 
@@ -36,17 +29,9 @@ You must follow these conventions when using authentication.
 
 ## Auth is already set up.
 
-All convex authentication functions are already set up. The auth currently uses email OTP and anonymous users, but can support more.
+Authentication uses Supabase Auth with username and password. Users register with a username which is mapped to an internal email pattern (`username@asternal.local`).
 
-The email OTP configuration is defined in `src/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
-
-Also, DO NOT MODIFY THESE AUTH FILES: `src/convex/auth.config.ts` and `src/convex/auth.ts`.
-
-## Using Convex Auth on the backend
-
-On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
-
-## Using Convex Auth on the frontend
+## Using Auth on the frontend
 
 The `/auth` page is already set up to use auth. Navigate to `/auth` for all log in / sign up sequences.
 
@@ -75,11 +60,9 @@ You can perform authorization checks on the frontend and backend.
 
 On the frontend, you can use the `useAuth` hook to get the current user's data and authentication state.
 
-You should also be protecting queries, mutations, and actions at the base level, checking for authorization securely.
-
 ## Adding a redirect after auth
 
-The `/auth` route in `src/main.tsx` redirects to `/dashboard` by default. If the
+The `/auth` route redirects to `/dashboard` by default. If the
 product's main authenticated route is different, update `redirectAfterAuth` to
 that route. A validated same-origin `returnTo` query parameter takes priority so
 users can resume the protected page they originally requested. Never leave an
@@ -104,7 +87,7 @@ Shadcn primitives are located in the `src/components/ui` folder and should be us
 
 Your page component should go under the `src/pages` folder.
 
-When adding a page, update the react router configuration in `src/main.tsx` to include the new route you just added.
+When adding a page, add the route in `src/routes/` using TanStack Router's file-based routing.
 
 ## Shad CN conventions
 
@@ -116,10 +99,9 @@ Follow these conventions when using Shad CN components, which you should use by 
 - AVOID SHADOWS. Avoid adding any shadows to components. stick with a thin border without the shadow.
 - Avoid skeletons; instead, use the loader2 component to show a spinning loading state when loading data.
 
-
 ## Landing Pages
 
-You must always create good-looking designer-level styles to your application. 
+You must always create good-looking designer-level styles to your application.
 - Make it well animated and fit a certain "theme", ie neo brutalist, retro, neumorphism, glass morphism, etc
 
 Use known images and emojis from online.
@@ -142,7 +124,6 @@ You must add animations to components using Framer Motion. It is already install
 
 To use it, import the `motion` component from `framer-motion` and use it to wrap the component you want to animate.
 
-
 ### Other Items to animate
 - Fade in and Fade Out
 - Slide in and Slide Out animations
@@ -151,14 +132,9 @@ To use it, import the `motion` component from `framer-motion` and use it to wrap
 
 Animate for all components, including on landing page and app pages.
 
-## Three JS Graphics
-
-Your app comes with three js by default. You can use it to create 3D graphics for landing pages, games, etc.
-
-
 ## Colors
 
-You can override colors in: `src/index.css`
+You can override colors in: `src/styles.css`
 
 This uses the oklch color format for tailwind v4.
 
@@ -170,7 +146,7 @@ Set theme using `dark` or `light` variables at the parent className.
 
 ## Styling and Theming
 
-When changing the theme, always change the underlying theme of the shad cn components app-wide under `src/components/ui` and the colors in the index.css file.
+When changing the theme, always change the underlying theme of the shad cn components app-wide under `src/components/ui` and the colors in the styles.css file.
 
 Avoid hardcoding in colors unless necessary for a use case, and properly implement themes through the underlying shad cn ui components.
 
@@ -214,59 +190,32 @@ Remember to import { toast } from "sonner". Usage: `toast("Event has been create
 
 Always ensure your larger dialogs have a scroll in its content to ensure that its content fits the screen size. Make sure that the content is not cut off from the screen.
 
-Ideally, instead of using a new page, use a Dialog instead. 
+Ideally, instead of using a new page, use a Dialog instead.
 
-# Using the Convex backend
+# Using the Supabase backend
 
-You will be implementing the convex backend. Follow your knowledge of convex and the documentation to implement the backend.
+You will be implementing features using Supabase. Follow your knowledge of Supabase and the documentation to implement backend features.
 
-## The Convex Schema
+## Database Functions
 
-You must correctly follow the convex schema implementation.
+All database operations are implemented in `src/lib/db.ts`. This file contains:
+- Auth functions (register, login, logout)
+- CRUD operations for posts, comments, likes, follows
+- Storage functions for file uploads
+- User profile management
 
-The schema is defined in `src/convex/schema.ts`.
+## Storage Buckets
 
-Do not include the `_id` and `_creationTime` fields in your queries (it is included by default for each table).
-Do not index `_creationTime` as it is indexed for you. Never have duplicate indexes.
+The project uses the following Supabase storage buckets:
+- `avatars` - User profile images
+- `media` - Post images and videos
+- `documents` - Post document attachments
 
+## Common Supabases To Avoid
 
-## Convex Actions: Using CRUD operations
-
-When running anything that involves external connections, you must use a convex action with "use node" at the top of the file.
-
-You cannot have queries or mutations in the same file as a "use node" action file. Thus, you must use pre-built queries and mutations in other files.
-
-You can also use the pre-installed internal crud functions for the database:
-
-```ts
-// in convex/users.ts
-import { crud } from "convex-helpers/server/crud";
-import schema from "./schema.ts";
-
-export const { create, read, update, destroy } = crud(schema, "users");
-
-// in some file, in an action:
-const user = await ctx.runQuery(internal.users.read, { id: userId });
-
-await ctx.runMutation(internal.users.update, {
-  id: userId,
-  patch: {
-    status: "inactive",
-  },
-});
-```
-
-
-## Common Convex Mistakes To Avoid
-
-When using convex, make sure:
-- Document IDs are referenced as `_id` field, not `id`.
-- Document ID types are referenced as `Id<"TableName">`, not `string`.
-- Document object types are referenced as `Doc<"TableName">`.
-- Keep schemaValidation to false in the schema file.
-- You must correctly type your code so that it passes the type checker.
-- You must handle null / undefined cases of your convex queries for both frontend and backend, or else it will throw an error that your data could be null or undefined.
-- Always use the `@/folder` path, with `@/convex/folder/file.ts` syntax for importing convex files.
-- This includes importing generated files like `@/convex/_generated/server`, `@/convex/_generated/api`
-- Remember to import functions like useQuery, useMutation, useAction, etc. from `convex/react`
-- NEVER have return type validators.
+When using Supabase, make sure:
+- Always handle errors from Supabase queries
+- Use `.maybeSingle()` instead of `.single()` when the row might not exist
+- Use `{ count: "exact", head: true }` for count queries to avoid fetching data
+- Always use the `@/` path alias for importing local files
+- Handle null / undefined cases of your queries on both frontend and backend

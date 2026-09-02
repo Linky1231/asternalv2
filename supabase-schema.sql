@@ -2,7 +2,6 @@
 -- ASTERNAL - Supabase Database Schema
 -- Run this in Supabase SQL Editor
 -- ========================================
-
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -161,13 +160,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Trigger to auto-create user profile
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- ========================================
 -- ROW LEVEL SECURITY (RLS)
 -- ========================================
-
 -- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;

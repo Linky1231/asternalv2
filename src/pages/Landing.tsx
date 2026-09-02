@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Code2, Rocket, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router";
+import { useNavigate } from "@/lib/router-compat";
 
 // ── Animation variants ──────────────────────────────────────────────
 // Ease: [0.32, 0.72, 0, 1] — smooth deceleration (design system standard)
@@ -132,20 +132,21 @@ export default function Landing() {
 
           {/* CTAs */}
           <motion.div
-            className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
             initial="hidden"
             animate="visible"
             variants={fadeUp}
             custom={3}
           >
             <motion.div
+              className="w-full sm:w-auto"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
               <Button
                 size="lg"
-                className="gap-2 px-8"
+                className="w-full gap-2 px-8 sm:w-auto"
                 onClick={() => navigate("/auth?mode=register")}
               >
                 Crear cuenta
@@ -153,6 +154,7 @@ export default function Landing() {
               </Button>
             </motion.div>
             <motion.div
+              className="w-full sm:w-auto"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
@@ -160,7 +162,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                className="gap-2 px-8"
+                className="w-full gap-2 px-8 sm:w-auto"
                 onClick={() => navigate("/auth?mode=login&returnTo=/dashboard")}
               >
                 Iniciar sesión

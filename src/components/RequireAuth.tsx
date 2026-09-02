@@ -1,11 +1,14 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
-import { Navigate, useLocation } from "react-router";
+import { useRef, type ReactNode } from "react";
+import { Navigate, useLocation } from "@/lib/router-compat";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, isAuthenticated } = useAuth();
   const location = useLocation();
+
+  // Captured on first render so a redirect can never re-append itself.
+  const initialTarget = useRef(`${location.pathname}${location.search}`);
 
   if (loading) {
     return (
@@ -16,10 +19,10 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    const returnTo = `${location.pathname}${location.search}`;
+    if (location.pathname.startsWith("/auth")) return null;
     return (
       <Navigate
-        to={`/auth?returnTo=${encodeURIComponent(returnTo)}`}
+        to={`/auth?returnTo=${encodeURIComponent(initialTarget.current)}`}
         replace
       />
     );

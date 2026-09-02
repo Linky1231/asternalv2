@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Loader2, UserPlus, LogIn, Eye, EyeOff } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "@/lib/router-compat";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AuthProps {
@@ -34,7 +34,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     searchParams.get("returnTo"),
     redirectAfterAuth,
   );
-
   const initialMode = searchParams.get("mode") === "register" ? "register" : "login";
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [username, setUsername] = useState("");
@@ -69,12 +68,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
-
     setIsLoading(true);
     try {
       await signUp({ username, password, name: displayName || undefined });
@@ -113,9 +110,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         <div className="mx-auto flex h-14 max-w-2xl items-center px-4">
           <button
             onClick={() => navigate("/")}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Volver al inicio"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -210,7 +208,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                             </button>
                           </div>
                         </div>
-
                         <AnimatePresence>
                           {error && (
                             <motion.p
@@ -218,13 +215,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                               animate={{ opacity: 1, height: "auto" }}
                               exit={{ opacity: 0, height: 0 }}
                               transition={{ duration: 0.2 }}
-                              className="text-sm text-red-500 text-center"
+                              className="text-center text-sm font-medium text-destructive"
                             >
                               {error}
                             </motion.p>
                           )}
                         </AnimatePresence>
-
                         <Button
                           type="submit"
                           className="w-full h-10"
@@ -331,7 +327,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                             className="h-10"
                           />
                         </div>
-
                         <AnimatePresence>
                           {error && (
                             <motion.p
@@ -339,13 +334,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                               animate={{ opacity: 1, height: "auto" }}
                               exit={{ opacity: 0, height: 0 }}
                               transition={{ duration: 0.2 }}
-                              className="text-sm text-red-500 text-center"
+                              className="text-center text-sm font-medium text-destructive"
                             >
                               {error}
                             </motion.p>
                           )}
                         </AnimatePresence>
-
                         <Button
                           type="submit"
                           className="w-full h-10"
@@ -370,26 +364,25 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </motion.div>
                 )}
               </AnimatePresence>
-
               {/* ── Switch mode ─────────────────────── */}
               <div className="border-t border-border/40 px-6 py-3.5 text-center">
                 <p className="text-xs text-muted-foreground">
                   {mode === "login" ? (
                     <>
-                      ¿No tienes cuenta?{" "}
+                      ¿No tienes cuenta?
                       <button
                         onClick={switchMode}
-                        className="font-medium text-primary hover:text-primary/80 transition-colors"
+                        className="ml-1 font-medium text-primary hover:text-primary/80 transition-colors"
                       >
                         Regístrate
                       </button>
                     </>
                   ) : (
                     <>
-                      ¿Ya tienes cuenta?{" "}
+                      ¿Ya tienes cuenta?
                       <button
                         onClick={switchMode}
-                        className="font-medium text-primary hover:text-primary/80 transition-colors"
+                        className="ml-1 font-medium text-primary hover:text-primary/80 transition-colors"
                       >
                         Inicia sesión
                       </button>

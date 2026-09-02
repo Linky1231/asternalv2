@@ -48,8 +48,9 @@ import {
   User,
   ArrowLeft,
   Newspaper,
+  Heading,
 } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "@/lib/router-compat";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DropdownMenu,
@@ -862,6 +863,7 @@ function MediaGrid({
 // ── Format Toolbar ─────────────────────────────────────────────────
 function FormatToolbar() {
   const [showColors, setShowColors] = useState(false);
+  const [showSizes, setShowSizes] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRange = useRef<Range | null>(null);
@@ -894,8 +896,6 @@ function FormatToolbar() {
     hintTimer.current = setTimeout(() => setHint(null), 2500);
   };
 
-
-
   return (
     <div className="w-full pt-3">
       {/* Toolbar buttons row */}
@@ -916,9 +916,6 @@ function FormatToolbar() {
           <Palette className="h-4 w-4 shrink-0" />
           <span className="text-xs font-medium whitespace-nowrap">Color</span>
         </Button>
-
-
-
         {/* Bold */}
         <Button
           type="button"
@@ -933,7 +930,6 @@ function FormatToolbar() {
         >
           <span className="text-sm font-extrabold leading-none">B</span>
         </Button>
-
         {/* Underline */}
         <Button
           type="button"
@@ -948,9 +944,23 @@ function FormatToolbar() {
         >
           <span className="text-sm font-medium underline leading-none">S</span>
         </Button>
-
+        {/* Text size (H1 / H2 / H3 / Normal) */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={`gap-1.5 px-3 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
+          onClick={() => {
+            if (showSizes) { setShowSizes(false); return; }
+            if (hasSelection()) saveSelection();
+            setShowSizes(true);
+          }}
+          title="Tamaño del texto"
+        >
+          <Heading className="h-4 w-4 shrink-0" />
+          <span className="text-xs font-medium whitespace-nowrap">Tamaño</span>
+        </Button>
       </div>
-
       {/* Hint below toolbar */}
       <AnimatePresence>
         {hint && (
@@ -965,7 +975,6 @@ function FormatToolbar() {
           </motion.p>
         )}
       </AnimatePresence>
-
       {/* Inline panels */}
       <AnimatePresence>
         {showColors && (
@@ -1011,8 +1020,51 @@ function FormatToolbar() {
           </motion.div>
         )}
       </AnimatePresence>
-
-
+      {/* Text size panel */}
+      <AnimatePresence>
+        {showSizes && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tamaño</span>
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  { tag: "h1", label: "H1", cls: "text-base font-extrabold" },
+                  { tag: "h2", label: "H2", cls: "text-[15px] font-bold" },
+                  { tag: "h3", label: "H3", cls: "text-sm font-semibold" },
+                  { tag: "p", label: "Normal", cls: "text-xs font-medium" },
+                ] as const).map((s) => (
+                  <button
+                    key={s.tag}
+                    type="button"
+                    className="rounded-lg border border-border/60 bg-card px-2.5 py-1.5 text-card-foreground transition-colors hover:border-primary/40 hover:bg-accent"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      restoreSelection();
+                      // Sin selección previa: enfocar el editor y aplicar al bloque actual
+                      const sel = window.getSelection();
+                      const editor = document.querySelector<HTMLElement>("[contenteditable]");
+                      if ((!sel || sel.rangeCount === 0) && editor) {
+                        editor.focus();
+                      }
+                      document.execCommand("formatBlock", false, s.tag === "p" ? "p" : s.tag);
+                      setShowSizes(false);
+                    }}
+                  >
+                    <span className={s.cls}>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowSizes(false)}><X className="h-3 w-3" /></button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
